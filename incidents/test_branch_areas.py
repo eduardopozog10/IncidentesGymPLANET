@@ -312,4 +312,5 @@ class BranchAreaMigrationTests(TransactionTestCase):
             self.assertIsNone(incident.branch_id)
             self.assertEqual(apps.get_model("incidents", "BranchArea").objects.count(), 0)
         finally:
-            MigrationExecutor(connection).migrate(target)
+            executor = MigrationExecutor(connection)
+            executor.migrate(executor.loader.graph.leaf_nodes())

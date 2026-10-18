@@ -1,12 +1,17 @@
 from django.contrib import admin
 
-from .forms import IncidentAdminForm
+from .forms import GymAssetAdminForm, IncidentAdminForm, MaintenanceAdminForm
 from .models import (
+    AssetMovement,
     Branch,
     BranchArea,
     ChannelMessage,
+    EquipmentCategory,
+    GymAsset,
     Incident,
     IncidentDraft,
+    MaintenanceRecord,
+    RequestCategory,
     Technician,
     TechnicianChannel,
 )
@@ -30,6 +35,82 @@ class BranchAreaAdmin(admin.ModelAdmin):
     readonly_fields = ("created_at", "updated_at")
     list_select_related = ("branch",)
     list_per_page = 25
+
+
+class CategoryAdmin(admin.ModelAdmin):
+    list_display = ("name", "code", "is_active")
+    list_filter = ("is_active",)
+    search_fields = ("name", "code", "description")
+    readonly_fields = ("created_at", "updated_at")
+
+
+admin.site.register(EquipmentCategory, CategoryAdmin)
+admin.site.register(RequestCategory, CategoryAdmin)
+
+
+class MaintenanceInline(admin.TabularInline):
+    model = MaintenanceRecord
+    extra = 0
+    fields = ("maintenance_type", "status", "branch", "scheduled_at", "performed_at", "responsible")
+    readonly_fields = fields
+    can_delete = False
+    show_change_link = True
+
+    def has_add_permission(self, request, obj=None):
+        return False
+
+
+class AssetMovementInline(admin.TabularInline):
+    model = AssetMovement
+    extra = 0
+    fields = ("from_branch", "from_area", "from_code", "to_branch", "to_area", "to_code", "created_at")
+    readonly_fields = fields
+    can_delete = False
+
+    def has_add_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(GymAsset)
+class GymAssetAdmin(admin.ModelAdmin):
+    form = GymAssetAdminForm
+    list_display = ("code", "name", "branch", "branch_area", "category", "operational_status", "is_active")
+    list_filter = ("branch", "branch_area", "category", "operational_status", "is_active")
+    search_fields = ("code", "name", "brand", "model", "serial_number")
+    readonly_fields = ("created_at", "updated_at")
+    list_select_related = ("branch", "branch_area", "category")
+    inlines = (MaintenanceInline, AssetMovementInline)
+
+
+@admin.register(MaintenanceRecord)
+class MaintenanceRecordAdmin(admin.ModelAdmin):
+    form = MaintenanceAdminForm
+    list_display = ("asset", "branch", "maintenance_type", "status", "scheduled_at", "performed_at", "responsible")
+    list_filter = ("branch", "maintenance_type", "status", "scheduled_at")
+    search_fields = ("asset__code", "asset__name", "description", "responsible")
+    readonly_fields = ("branch", "created_at", "updated_at")
+    list_select_related = ("asset__branch", "branch", "incident")
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(AssetMovement)
+class AssetMovementAdmin(admin.ModelAdmin):
+    list_display = ("asset", "from_branch", "to_branch", "created_at")
+    list_filter = ("from_branch", "to_branch")
+    search_fields = ("asset__code", "asset__name", "from_code", "to_code")
+    readonly_fields = tuple(field.name for field in AssetMovement._meta.fields)
+    list_select_related = ("asset__branch", "from_branch", "to_branch")
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
 
 
 class TechnicianChannelInline(admin.TabularInline):
@@ -110,6 +191,8 @@ class IncidentAdmin(admin.ModelAdmin):
         "branch",
         "branch_area",
         "report_type",
+        "gym_asset",
+        "request_category",
         "unit",
         "equipment",
         "failure_type",
@@ -121,6 +204,7 @@ class IncidentAdmin(admin.ModelAdmin):
         "branch",
         "branch_area",
         "report_type",
+        "request_category",
         "priority",
         "status",
         "created_at",
@@ -130,6 +214,8 @@ class IncidentAdmin(admin.ModelAdmin):
         "branch__code",
         "branch_area__name",
         "branch_area__code",
+        "gym_asset__code",
+        "gym_asset__name",
         "unit",
         "equipment",
         "failure_type",
@@ -145,7 +231,7 @@ class IncidentAdmin(admin.ModelAdmin):
         "updated_at",
         "resolved_at",
     )
-    list_select_related = ("technician", "branch", "branch_area__branch")
+    list_select_related = ("technician", "branch", "branch_area__branch", "gym_asset__branch", "request_category")
     ordering = ("-created_at",)
     date_hierarchy = "created_at"
     list_per_page = 25
@@ -160,6 +246,8 @@ class IncidentAdmin(admin.ModelAdmin):
                     "branch",
                     "branch_area",
                     "report_type",
+                    "gym_asset",
+                    "request_category",
                     "status",
                     "priority",
                 )
@@ -174,6 +262,7 @@ class IncidentAdmin(admin.ModelAdmin):
                     "equipment",
                     "failure_type",
                     "description",
+                    "operational_impact",
                     "original_message",
                 )
             },

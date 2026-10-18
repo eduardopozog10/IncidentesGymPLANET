@@ -1,7 +1,17 @@
 import uuid
 
 from django.core.exceptions import ValidationError
-from django.db import models
+from django.db import models, transaction
+from django.db.models.functions import Now
+from django.utils import timezone
+
+
+def relations_changed(instance, fields):
+    """Only revalidate current placement when an association is actually changed."""
+    if instance._state.adding:
+        return True
+    previous = type(instance).objects.filter(pk=instance.pk).values(*fields).first()
+    return previous is None or any(previous[field] != getattr(instance, field) for field in fields)
 
 
 class Branch(models.Model):
@@ -75,9 +85,128 @@ class BranchArea(models.Model):
             raise ValidationError({
                 "branch": "No se puede trasladar un área utilizada por incidencias de otra sucursal.",
             })
+        if self.pk and self.assets.exclude(branch_id=self.branch_id).exists():
+            raise ValidationError({"branch": "El área contiene activos de otra sucursal."})
+        if self.pk and (
+            self.asset_departures.exclude(from_branch_id=self.branch_id).exists()
+            or self.asset_arrivals.exclude(to_branch_id=self.branch_id).exists()
+        ):
+            raise ValidationError({"branch": "El área forma parte del historial de movimientos."})
 
     def __str__(self):
         return f"{self.branch.code} / {self.code} - {self.name}"
+
+
+class EquipmentCategory(models.Model):
+    code = models.CharField(max_length=50, unique=True, verbose_name="código")
+    name = models.CharField(max_length=150, verbose_name="nombre")
+    description = models.TextField(blank=True, verbose_name="descripción")
+    is_active = models.BooleanField(default=True, verbose_name="activa")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="fecha de creación")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="última actualización")
+
+    class Meta:
+        db_table = "equipment_categories"
+        verbose_name = "categoría de equipamiento"
+        verbose_name_plural = "categorías de equipamiento"
+        ordering = ["name", "code"]
+
+    def __str__(self):
+        return f"{self.code} - {self.name}"
+
+
+class RequestCategory(models.Model):
+    code = models.CharField(max_length=50, unique=True, verbose_name="código")
+    name = models.CharField(max_length=150, verbose_name="nombre")
+    description = models.TextField(blank=True, verbose_name="descripción")
+    is_active = models.BooleanField(default=True, verbose_name="activa")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="fecha de creación")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="última actualización")
+
+    class Meta:
+        db_table = "request_categories"
+        verbose_name = "categoría de solicitud"
+        verbose_name_plural = "categorías de solicitudes"
+        ordering = ["name", "code"]
+
+    def __str__(self):
+        return f"{self.code} - {self.name}"
+
+
+class GymAsset(models.Model):
+    class OperationalStatus(models.TextChoices):
+        OPERATIONAL = "operational", "Operativo"
+        RESTRICTED = "restricted", "Operativo con restricciones"
+        OUT_OF_SERVICE = "out_of_service", "Fuera de servicio"
+        MAINTENANCE = "maintenance", "En mantenimiento"
+
+    branch = models.ForeignKey(Branch, on_delete=models.PROTECT, related_name="assets", verbose_name="sucursal")
+    branch_area = models.ForeignKey(BranchArea, on_delete=models.PROTECT, related_name="assets", null=True, blank=True, verbose_name="área")
+    category = models.ForeignKey(EquipmentCategory, on_delete=models.PROTECT, related_name="assets", verbose_name="categoría")
+    code = models.CharField(max_length=50, verbose_name="código interno")
+    name = models.CharField(max_length=150, verbose_name="nombre")
+    brand = models.CharField(max_length=150, blank=True, verbose_name="marca")
+    model = models.CharField(max_length=150, blank=True, verbose_name="modelo")
+    serial_number = models.CharField(max_length=150, blank=True, verbose_name="número de serie")
+    description = models.TextField(blank=True, verbose_name="descripción")
+    operational_status = models.CharField(max_length=20, choices=OperationalStatus.choices, default=OperationalStatus.OPERATIONAL, verbose_name="estado operativo")
+    is_active = models.BooleanField(default=True, verbose_name="activo")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="fecha de creación")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="última actualización")
+
+    class Meta:
+        db_table = "gym_assets"
+        verbose_name = "equipo o activo"
+        verbose_name_plural = "equipos y activos"
+        ordering = ["branch__name", "name", "code"]
+        constraints = [
+            models.UniqueConstraint(fields=["branch", "code"], name="unique_asset_code_per_branch"),
+            models.CheckConstraint(condition=models.Q(operational_status__in=["operational", "restricted", "out_of_service", "maintenance"]), name="asset_valid_operational_status"),
+        ]
+
+    def clean(self):
+        super().clean()
+        if self.branch_area_id and not BranchArea.objects.filter(pk=self.branch_area_id, branch_id=self.branch_id).exists():
+            raise ValidationError({"branch_area": "El área debe pertenecer a la sucursal del activo."})
+
+    @transaction.atomic
+    def transfer_to(self, branch, *, branch_area=None, code=None):
+        """Move explicitly; PostgreSQL records the old and new placement atomically."""
+        asset = type(self).objects.select_for_update().get(pk=self.pk)
+        asset.branch, asset.branch_area = branch, branch_area
+        if code is not None:
+            asset.code = code
+        asset.full_clean()
+        asset.save(update_fields=["branch", "branch_area", "code", "updated_at"])
+        self.refresh_from_db()
+        return self
+
+    def deactivate(self):
+        self.is_active = False
+        self.save(update_fields=["is_active", "updated_at"])
+
+    def __str__(self):
+        return f"{self.branch.code} / {self.code} - {self.name}"
+
+
+class AssetMovement(models.Model):
+    asset = models.ForeignKey(GymAsset, on_delete=models.PROTECT, related_name="movements", verbose_name="activo")
+    from_branch = models.ForeignKey(Branch, on_delete=models.PROTECT, related_name="asset_departures", verbose_name="sucursal anterior")
+    to_branch = models.ForeignKey(Branch, on_delete=models.PROTECT, related_name="asset_arrivals", verbose_name="sucursal nueva")
+    from_area = models.ForeignKey(BranchArea, on_delete=models.PROTECT, related_name="asset_departures", null=True, blank=True, verbose_name="área anterior")
+    to_area = models.ForeignKey(BranchArea, on_delete=models.PROTECT, related_name="asset_arrivals", null=True, blank=True, verbose_name="área nueva")
+    from_code = models.CharField(max_length=50, verbose_name="código anterior")
+    to_code = models.CharField(max_length=50, verbose_name="código nuevo")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="fecha")
+
+    class Meta:
+        db_table = "asset_movements"
+        verbose_name = "movimiento de activo"
+        verbose_name_plural = "movimientos de activos"
+        ordering = ["-created_at", "-pk"]
+
+    def __str__(self):
+        return f"{self.asset_id}: {self.from_code} → {self.to_code}"
 
 
 class Technician(models.Model):
@@ -238,6 +367,14 @@ class Incident(models.Model):
         default=ReportType.INCIDENT,
         verbose_name="tipo de reporte",
     )
+    gym_asset = models.ForeignKey(
+        GymAsset, on_delete=models.PROTECT, related_name="incidents",
+        null=True, blank=True, verbose_name="activo registrado",
+    )
+    request_category = models.ForeignKey(
+        RequestCategory, on_delete=models.PROTECT, related_name="requests",
+        null=True, blank=True, verbose_name="categoría de solicitud",
+    )
     technician = models.ForeignKey(
         Technician,
         on_delete=models.PROTECT,
@@ -287,6 +424,7 @@ class Incident(models.Model):
         blank=True,
         default="",
         verbose_name="impacto operacional",
+        help_text="Describe riesgos de lesiones, seguridad de usuarios, máquinas no disponibles, cierre de áreas o interrupción de la sede. La prioridad la define el reportante.",
     )
 
     priority = models.CharField(
@@ -332,6 +470,9 @@ class Incident(models.Model):
                 condition=models.Q(report_type__in=["incident", "request"]),
                 name="incident_valid_report_type",
             ),
+            models.CheckConstraint(condition=models.Q(gym_asset__isnull=True) | models.Q(branch__isnull=False), name="incident_asset_requires_branch"),
+            models.CheckConstraint(condition=models.Q(request_category__isnull=True) | models.Q(report_type="request"), name="request_category_requires_request"),
+            models.CheckConstraint(condition=models.Q(priority__in=["low", "medium", "high", "critical"]), name="incident_valid_priority"),
         ]
 
     def clean(self):
@@ -347,6 +488,20 @@ class Incident(models.Model):
                 raise ValidationError({
                     "branch_area": "El área debe pertenecer a la sucursal seleccionada.",
                 })
+        if self.request_category_id and self.report_type != self.ReportType.REQUEST:
+            raise ValidationError({"request_category": "Solo las solicitudes admiten categoría de solicitud."})
+        if self.gym_asset_id and relations_changed(self, ["gym_asset_id", "branch_id", "branch_area_id"]):
+            asset = GymAsset.objects.filter(pk=self.gym_asset_id).first()
+            if asset and (self.branch_id != asset.branch_id or (
+                self.branch_area_id and asset.branch_area_id and self.branch_area_id != asset.branch_area_id
+            )):
+                raise ValidationError({"gym_asset": "El activo debe corresponder a la sucursal y área indicadas."})
+        if self.pk:
+            records = self.maintenance_records.all()
+            if records.exclude(branch_id=self.branch_id).exists():
+                raise ValidationError({"branch": "La sucursal está conservada en el historial de mantenimiento."})
+            if self.gym_asset_id and records.exclude(asset_id=self.gym_asset_id).exists():
+                raise ValidationError({"gym_asset": "El activo no coincide con el mantenimiento asociado."})
 
     @property
     def code(self):
@@ -357,6 +512,76 @@ class Incident(models.Model):
 
     def __str__(self):
         return f"{self.code} - {self.equipment}"
+
+
+class MaintenanceRecord(models.Model):
+    class MaintenanceType(models.TextChoices):
+        PREVENTIVE = "preventive", "Preventivo"
+        CORRECTIVE = "corrective", "Correctivo"
+
+    class Status(models.TextChoices):
+        SCHEDULED = "scheduled", "Programado"
+        IN_PROGRESS = "in_progress", "En progreso"
+        COMPLETED = "completed", "Completado"
+        CANCELLED = "cancelled", "Cancelado"
+
+    asset = models.ForeignKey(GymAsset, on_delete=models.PROTECT, related_name="maintenance_records", verbose_name="activo")
+    incident = models.ForeignKey(Incident, on_delete=models.PROTECT, related_name="maintenance_records", null=True, blank=True, verbose_name="reporte relacionado")
+    # Snapshot: asset transfers must never rewrite the maintenance branch.
+    branch = models.ForeignKey(Branch, on_delete=models.PROTECT, related_name="maintenance_records", editable=False, blank=True, verbose_name="sucursal del registro")
+    maintenance_type = models.CharField(max_length=20, choices=MaintenanceType.choices, verbose_name="tipo")
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.SCHEDULED, verbose_name="estado")
+    scheduled_at = models.DateTimeField(null=True, blank=True, verbose_name="fecha programada")
+    performed_at = models.DateTimeField(null=True, blank=True, verbose_name="fecha de realización")
+    description = models.TextField(verbose_name="trabajo a realizar o realizado")
+    observations = models.TextField(blank=True, verbose_name="observaciones")
+    responsible = models.CharField(max_length=200, blank=True, verbose_name="responsable o proveedor")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="fecha de creación")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="última actualización")
+
+    class Meta:
+        db_table = "maintenance_records"
+        verbose_name = "registro de mantenimiento"
+        verbose_name_plural = "registros de mantenimiento"
+        ordering = ["-created_at", "-pk"]
+        constraints = [
+            models.CheckConstraint(condition=models.Q(maintenance_type__in=["preventive", "corrective"]), name="maintenance_valid_type"),
+            models.CheckConstraint(condition=models.Q(status__in=["scheduled", "in_progress", "completed", "cancelled"]), name="maintenance_valid_status"),
+            models.CheckConstraint(condition=(models.Q(status="completed", performed_at__isnull=False) | (~models.Q(status="completed") & models.Q(performed_at__isnull=True))), name="maintenance_completion_date"),
+            models.CheckConstraint(condition=models.Q(performed_at__isnull=True) | models.Q(performed_at__lte=Now()), name="maintenance_not_performed_future"),
+        ]
+
+    def clean(self):
+        super().clean()
+        if self.performed_at and self.performed_at > timezone.now():
+            raise ValidationError({"performed_at": "La realización no puede estar en el futuro."})
+        if (self.status == self.Status.COMPLETED) != (self.performed_at is not None):
+            raise ValidationError({"performed_at": "Solo un mantenimiento completado debe indicar fecha de realización."})
+        if not self._state.adding:
+            previous = type(self).objects.filter(pk=self.pk).values("asset_id", "branch_id").first()
+            if previous and self.asset_id != previous["asset_id"]:
+                raise ValidationError({"asset": "El equipo de un mantenimiento registrado no puede cambiarse."})
+            if previous and self.branch_id != previous["branch_id"]:
+                raise ValidationError({"branch": "La sucursal histórica no puede reescribirse."})
+        if self.asset_id and relations_changed(self, ["asset_id", "incident_id"]):
+            asset = GymAsset.objects.filter(pk=self.asset_id).first()
+            if asset:
+                if self._state.adding:
+                    self.branch_id = asset.branch_id
+                if self.incident_id:
+                    incident = Incident.objects.filter(pk=self.incident_id).first()
+                    if incident and (incident.branch_id != self.branch_id or incident.gym_asset_id not in (None, asset.pk)):
+                        raise ValidationError({"incident": "El reporte debe corresponder a la sucursal y al activo del mantenimiento."})
+
+    def __str__(self):
+        return f"{self.asset} - {self.get_maintenance_type_display()}"
+
+    def save(self, *args, **kwargs):
+        if self.asset_id and self._state.adding:
+            self.branch_id = GymAsset.objects.values_list("branch_id", flat=True).get(pk=self.asset_id)
+            if kwargs.get("update_fields") is not None:
+                kwargs["update_fields"] = set(kwargs["update_fields"]) | {"branch"}
+        super().save(*args, **kwargs)
 
 
 class ChannelMessage(models.Model):

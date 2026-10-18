@@ -2,6 +2,11 @@
 
 Sistema en desarrollo para gestionar incidencias y solicitudes operativas de las sucursales de Gym Planet Chile.
 
+La base funcional de inventario, mantenimiento y solicitudes se documenta en
+[docs/inventory-maintenance.md](docs/inventory-maintenance.md), incluidas las reglas
+de historial, traslados, prioridades y validación. Las nuevas migraciones de esa
+etapa requieren revisión antes de aplicarse a la base principal.
+
 ## Independencia de Secuoya
 
 Esta es una copia independiente de IncidentesCanal13 / Secuoya Chile. El remote esperado es `https://github.com/eduardopozog10/IncidentesGymPLANET.git`.
