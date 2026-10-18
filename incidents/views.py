@@ -27,6 +27,9 @@ from incidents.messaging.telegram_update_handler import (
 from incidents.models import Incident
 from incidents.permissions import IsActiveSuperuser
 from incidents.services.report_status import update_report_status
+from incidents.permissions import CanManageOperations
+from django.core.exceptions import ValidationError as DjangoValidationError
+from rest_framework.exceptions import ValidationError as APIValidationError
 from incidents.serializers import (
     IncidentSerializer,
     IncidentStatusUpdateSerializer,
@@ -148,7 +151,7 @@ def build_normalized_area_data(queryset):
 
 
 class IncidentListView(generics.ListAPIView):
-    permission_classes = [IsActiveSuperuser]
+    permission_classes = [CanManageOperations]
     serializer_class = IncidentSerializer
 
     ALLOWED_ORDERING_FIELDS = {
@@ -273,7 +276,7 @@ class IncidentListView(generics.ListAPIView):
 
 
 class IncidentSummaryView(APIView):
-    permission_classes = [IsActiveSuperuser]
+    permission_classes = [CanManageOperations]
 
     def get(self, request):
         queryset = Incident.objects.all()
@@ -374,7 +377,7 @@ class IncidentSummaryView(APIView):
 
 
 class IncidentAnalyticsView(APIView):
-    permission_classes = [IsActiveSuperuser]
+    permission_classes = [CanManageOperations]
 
     def get(self, request):
         queryset = Incident.objects.all()
@@ -638,7 +641,7 @@ class IncidentAnalyticsView(APIView):
 
 
 class IncidentDetailView(generics.RetrieveAPIView):
-    permission_classes = [IsActiveSuperuser]
+    permission_classes = [CanManageOperations]
     serializer_class = IncidentSerializer
 
     def get_queryset(self):
@@ -654,7 +657,10 @@ class IncidentDetailView(generics.RetrieveAPIView):
         )
         serializer.is_valid(raise_exception=True)
 
-        incident = update_report_status(incident.pk, serializer.validated_data["status"])
+        try:
+            incident = update_report_status(incident.pk, serializer.validated_data["status"], actor=request.user, solution=request.data.get("solution", ""), reason=request.data.get("reason", ""))
+        except DjangoValidationError as error:
+            raise APIValidationError(error.messages)
 
         response_serializer = IncidentSerializer(
             incident,

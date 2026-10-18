@@ -39,7 +39,7 @@ class OperationalDashboardTests(TestCase):
     def test_control_center_real_metrics(self):
         response = self.client.get(reverse("dashboard"))
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.context["metrics"], {"total": 3, "open_incidents": 1, "pending_requests": 1, "urgent": 1, "active_branches": 2, "unavailable_assets": 0})
+        self.assertEqual({key:response.context["metrics"][key] for key in ("total","open_incidents","pending_requests","urgent","active_branches","unavailable_assets")}, {"total": 3, "open_incidents": 1, "pending_requests": 1, "urgent": 1, "active_branches": 2, "unavailable_assets": 0})
         self.assertContains(response, "Centro de control")
         self.assertContains(response, self.incident.code)
         self.assertContains(response, self.request.code)
@@ -132,12 +132,14 @@ class OperationalDashboardTests(TestCase):
     def test_status_update_preserves_report_fields(self):
         url = reverse("report-detail", args=[self.incident.pk])
         before = self.incident.description
-        self.assertEqual(self.client.post(url, {"status": "resolved", "branch": self.other.pk}).status_code, 302)
+        self.incident.status = "in_progress"
+        self.incident.save()
+        self.assertEqual(self.client.post(url, {"status": "resolved", "solution":"Solución de prueba", "branch": self.other.pk}).status_code, 302)
         self.incident.refresh_from_db()
         self.assertEqual(self.incident.status, "resolved")
         self.assertIsNotNone(self.incident.resolved_at)
         self.assertEqual((self.incident.description, self.incident.branch_id, self.incident.code_prefix), (before, self.branch.pk, "SC"))
-        self.client.post(url, {"status": "in_progress"})
+        self.client.post(url, {"status": "under_review", "reason":"Reabrir para revisión"})
         self.incident.refresh_from_db()
         self.assertIsNone(self.incident.resolved_at)
 
@@ -153,7 +155,7 @@ class OperationalDashboardTests(TestCase):
         url = reverse("report-detail", args=[self.incident.pk])
         self.assertEqual(client.post(url, {"status": "resolved"}).status_code, 403)
         client.get(url)
-        self.assertEqual(client.post(url, {"status": "resolved"}, HTTP_X_CSRFTOKEN=client.cookies["csrftoken"].value).status_code, 302)
+        self.assertEqual(client.post(url, {"status": "under_review"}, HTTP_X_CSRFTOKEN=client.cookies["csrftoken"].value).status_code, 302)
 
     def test_all_new_routes_require_superuser(self):
         urls = [reverse(name) for name in ("dashboard", "dashboard-incidents", "dashboard-requests", "dashboard-reports", "dashboard-branches", "dashboard-assets")]+[reverse("report-detail", args=[self.incident.pk])]
@@ -254,11 +256,12 @@ class ReportCodeConcurrencyTests(TransactionTestCase):
             executor.migrate([("incidents", "0018_gymplanet_report_codes")])
             historical = Incident.objects.get(pk=old.pk)
             self.assertEqual(historical.code, f"SC-{old.pk:06d}")
+            MigrationExecutor(connection).migrate(MigrationExecutor(connection).loader.graph.leaf_nodes())
             new = Incident.objects.create(technician=self.reporter, equipment="Nuevo", failure_type="Falla", description="Nuevo reporte", priority="low")
             self.assertEqual(new.pk, old.pk+1)
             self.assertEqual(new.code, f"GP-{new.pk:06d}")
         finally:
-            MigrationExecutor(connection).migrate([("incidents", "0018_gymplanet_report_codes")])
+            MigrationExecutor(connection).migrate(MigrationExecutor(connection).loader.graph.leaf_nodes())
 
 
 @override_settings(AI_PROVIDER="mock", GEMINI_API_KEY="", TELEGRAM_BOT_TOKEN="")

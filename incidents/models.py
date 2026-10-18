@@ -481,6 +481,7 @@ class Incident(models.Model):
     )
 
     class Meta:
+        permissions = [("manage_operations", "Gestionar operaciones de todas las sucursales")]
         db_table = "incidents"
         verbose_name = "incidente"
         verbose_name_plural = "incidentes"
@@ -855,3 +856,41 @@ class IncidentDraft(models.Model):
             f"Borrador de {self.technician.full_name} "
             f"- {self.get_status_display()}"
         )
+
+
+class OperationalRecord(models.Model):
+    report = models.ForeignKey(Incident, on_delete=models.PROTECT, related_name="%(class)ss")
+    actor = models.ForeignKey("auth.User", null=True, on_delete=models.PROTECT)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        abstract = True
+        ordering = ["-created_at", "-pk"]
+
+    def save(self, *args, **kwargs):
+        if not self._state.adding:
+            raise ValidationError("El historial es inmutable; registra una nueva acción.")
+        return super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError("El historial no puede eliminarse.")
+
+
+class ReportAssignment(OperationalRecord):
+    responsible = models.CharField(max_length=200)
+    person_name = models.CharField(max_length=200, blank=True)
+    notes = models.TextField(blank=True)
+
+    class Meta(OperationalRecord.Meta):
+        db_table = "report_assignments"
+        constraints = [models.CheckConstraint(condition=~models.Q(responsible=""), name="assignment_requires_responsible")]
+
+
+class ReportActivity(OperationalRecord):
+    action = models.CharField(max_length=30)
+    description = models.TextField()
+    before = models.JSONField(default=dict)
+    after = models.JSONField(default=dict)
+
+    class Meta(OperationalRecord.Meta):
+        db_table = "report_activity"

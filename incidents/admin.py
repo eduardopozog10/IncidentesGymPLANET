@@ -261,6 +261,7 @@ class IncidentAdmin(SecureModelAdmin):
     )
     readonly_fields = (
         "incident_code",
+        "status",
         "created_at",
         "updated_at",
         "resolved_at",

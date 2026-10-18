@@ -71,10 +71,10 @@
 <span class="status-dot">
 </span>Gestión multisucursal<small>Una red. Una visión operativa.</small>
 </div>
-<a href="{% url 'admin:index' %}">Administración Django <span aria-hidden="true">↗</span>
-</a>
+{% if request.user.is_superuser %}<a href="{% url 'admin:index' %}">Administración Django <span aria-hidden="true">↗</span>
+</a>{% endif %}
 </div>
-</aside>
+<form method="post" action="{% url 'operations-logout' %}">{% csrf_token %}<button class="button compact">Cerrar sesión</button></form></aside>
 <div class="workspace">
 <header class="topbar">
 <span>Operaciones <span class="slash">/</span> <strong>{{ page_title }}</strong>

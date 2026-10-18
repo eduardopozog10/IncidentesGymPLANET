@@ -47,8 +47,10 @@
 </dl>{% if report.report_type == 'request' %}<p class="context-note">Las cantidades se presentan tal como fueron informadas; no se deducen campos adicionales.</p>{% endif %}</article>
 <aside class="panel status-panel">
 <p class="eyebrow">SEGUIMIENTO OPERATIVO</p>
-<h2>Gestionar estado</h2>
-<p class="muted">Actualiza el avance de este reporte.</p>
+<h2>Gestión operativa</h2>{% for error in operation_errors %}<p role="alert" class="errorlist">{{ error }}</p>{% endfor %}
+<p><strong>Responsable:</strong> {{ assignment.responsible|default:'Sin asignar' }} {{ assignment.person_name }}</p>{% if assignment %}<p>{{ assignment.created_at|date:'d/m/Y H:i' }} · {{ assignment.actor.username }}</p><p>{{ assignment.notes|linebreaksbr }}</p>{% endif %}
+<details><summary>Asignar o reasignar</summary><form method="post">{% csrf_token %}<input type="hidden" name="action" value="assign"><p><label>Responsable / oficio<input name="responsible" required maxlength="200" value="{{ submitted.responsible }}"></label></p><p><label>Nombre opcional<input name="person_name" maxlength="200" value="{{ submitted.person_name }}"></label></p><p><label>Observaciones<textarea name="notes" maxlength="4000">{{ submitted.notes }}</textarea></label></p><button class="button">Guardar asignación</button></form></details>
+<p class="muted">Selecciona cualquier estado, sin pasos intermedios. Para resolver, registra la solución aplicada.</p>
 <form method="post">{% csrf_token %}{{ status_form.as_p }}<button class="button primary" type="submit">Guardar estado →</button>
 </form>
 <dl class="details single">
@@ -59,8 +61,9 @@
 <dt>Resolución</dt>
 <dd>{{ report.resolved_at|date:'d/m/Y H:i' }}</dd>
 </div>{% endif %}</dl>
-</aside>
+<h3>Seguimiento</h3><form method="post">{% csrf_token %}<input type="hidden" name="action" value="comment"><label>Comentario<textarea name="comment" required maxlength="4000">{{ submitted.comment }}</textarea></label><button class="button">Registrar avance</button></form></aside>
 </div>
+<section class="panel"><h2>Actividad e historial</h2>{% for event in activity %}<article class="maintenance"><strong>{{ event.description }}</strong><p>{{ event.created_at|date:'d/m/Y H:i' }} · {{ event.actor.username|default:'Sistema / cuenta reportante' }}</p>{% if event.after.reason %}<p>{{ event.after.reason }}</p>{% endif %}</article>{% empty %}<p>Sin actividad registrada desde la incorporación del seguimiento; no se reconstruye el historial anterior.</p>{% endfor %}<nav class="pagination" aria-label="Páginas de actividad">{% if activity.has_previous %}<a href="{% querystring activity_page=activity.previous_page_number %}">Anterior</a>{% endif %}<span>Página {{ activity.number }} de {{ activity.paginator.num_pages }}</span>{% if activity.has_next %}<a href="{% querystring activity_page=activity.next_page_number %}">Siguiente</a>{% endif %}</nav></section>
 {% if report.report_type == 'incident' %}<section class="panel">
 <div class="panel-heading">
 <h2>Mantenimiento asociado</h2>

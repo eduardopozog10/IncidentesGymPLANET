@@ -1148,3 +1148,5 @@ td small {
 }
 
 .skip-link {color:var(--text-on-brand-hover);}
+
+textarea {width:100%;max-width:100%;min-height:85px;background:var(--background-elevated);color:var(--text-primary);border:1px solid var(--border-default);border-radius:7px;padding:10px;font:inherit;resize:vertical} textarea:focus-visible {outline:2px solid var(--focus-ring)}

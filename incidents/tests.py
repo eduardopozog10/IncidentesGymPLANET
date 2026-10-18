@@ -2615,6 +2615,8 @@ class IncidentDetailViewTests(TestCase):
 
 
     def test_updates_incident_status(self):
+        self.incident.status = "under_review"
+        self.incident.save()
 
         response = self.client.patch(
 
@@ -2682,6 +2684,8 @@ class IncidentDetailViewTests(TestCase):
 
 
     def test_sets_resolved_at_when_incident_is_resolved(self):
+        self.incident.status = "in_progress"
+        self.incident.save()
 
         response = self.client.patch(
 
@@ -2690,6 +2694,7 @@ class IncidentDetailViewTests(TestCase):
             data={
 
                 "status": Incident.Status.RESOLVED,
+                "solution": "Solución de prueba",
 
             },
 
@@ -2778,6 +2783,7 @@ class IncidentDetailViewTests(TestCase):
             data={
 
                 "status": Incident.Status.UNDER_REVIEW,
+                "reason": "Reapertura de prueba",
 
             },
 

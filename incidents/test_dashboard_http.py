@@ -67,7 +67,9 @@ class DashboardHTTPTests(StaticLiveServerTestCase):
                 cookies.load(header)
             csrf = re.search(r'name="csrfmiddlewaretoken" value="([^"]+)"', html).group(1)
         cookie = self.cookie + "; csrftoken=" + cookies["csrftoken"].value
-        with self.fetch(path, {"status": "resolved", "csrfmiddlewaretoken": csrf}, cookie=cookie) as response:
+        self.incident.status="in_progress"
+        self.incident.save()
+        with self.fetch(path, {"status": "resolved", "solution":"Solución de prueba", "csrfmiddlewaretoken": csrf}, cookie=cookie) as response:
             self.assertEqual(response.status, 200)
         self.incident.refresh_from_db()
         self.assertEqual(self.incident.status, "resolved")
@@ -75,7 +77,7 @@ class DashboardHTTPTests(StaticLiveServerTestCase):
 
     def test_anonymous_and_staff_http_requests_are_denied(self):
         with self.fetch(reverse("dashboard"), cookie="") as response:
-            self.assertIn("/admin/login/", response.geturl())
+            self.assertIn("/operations/login/", response.geturl())
             self.assertNotIn(self.incident.code, response.read().decode())
         staff = get_user_model().objects.create_user(username="http-staff-test", is_staff=True)
         client = Client()

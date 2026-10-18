@@ -1,5 +1,9 @@
 # IncidentesGymPLANET
 
+El [lote 8: gestión operativa](docs/lot8-operations.md) incorpora el rol general,
+asignaciones, seguimiento e historial. Sus migraciones 0019/0020 están pendientes
+de autorización en la principal; revisar ese informe antes de iniciar esta versión.
+
 Sistema en desarrollo para gestionar incidencias y solicitudes operativas de las sucursales de Gym Planet Chile.
 
 La base funcional de inventario, mantenimiento y solicitudes se documenta en
