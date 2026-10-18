@@ -6,6 +6,10 @@ from typing import Any
 class IncidentExtractionResult:
     intent: str = "incident_report"
     conversation_reply: str | None = None
+    report_type: str | None = None
+    branch: str | None = None
+    request_kind: str | None = None
+    request_category: str | None = None
 
     unit: str | None = None
     area: str | None = None

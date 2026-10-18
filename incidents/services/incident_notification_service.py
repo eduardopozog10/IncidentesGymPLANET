@@ -68,7 +68,7 @@ def send_incident_created_email(
 
     body = (
         "Se ha registrado un nuevo incidente "
-        "en Secuoya Chile.\n\n"
+        "en Gym Planet Chile.\n\n"
         f"Código: {incident.code}\n"
         f"Prioridad: {priority}\n"
         f"Área: {incident.area or 'No informada'}\n"

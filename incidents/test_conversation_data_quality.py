@@ -1,3 +1,5 @@
+from incidents.conversation_test_support import LegacyBranchFixture, with_test_branch, legacy_draft_data
+
 
 from django.test import TestCase
 
@@ -27,7 +29,7 @@ class SequentialAIProvider:
         return self.responses.pop(0)
 
 
-class ConversationDataQualityTests(TestCase):
+class ConversationDataQualityTests(LegacyBranchFixture, TestCase):
     def setUp(self):
         self.reporter = Technician.objects.create(
             full_name="Reportante de prueba",
@@ -52,7 +54,7 @@ class ConversationDataQualityTests(TestCase):
             external_user_id="conversation-qa",
             external_chat_id="conversation-qa",
             external_message_id=f"qa-{self.message_number}",
-            text=text,
+            text=with_test_branch(text),
             raw_payload={"test": True},
         )
 
@@ -117,7 +119,7 @@ class ConversationDataQualityTests(TestCase):
             technician=self.reporter,
             status=IncidentDraft.Status.COLLECTING,
             last_question="¿Puedes dar más detalles del reporte?",
-            extracted_data={
+            extracted_data=legacy_draft_data({
                 "unit": "Cámara 3, está en el Estudio 2",
                 "area": None,
                 "location_context": "Cámara 3, está en el Estudio 2",
@@ -127,7 +129,7 @@ class ConversationDataQualityTests(TestCase):
                 "description": None,
                 "operational_impact": None,
                 "priority": None,
-            },
+            }),
             missing_fields=[
                 "area",
                 "failure_type",
@@ -190,7 +192,7 @@ class ConversationDataQualityTests(TestCase):
         draft = IncidentDraft.objects.create(
             technician=self.reporter,
             status=IncidentDraft.Status.READY,
-            extracted_data={
+            extracted_data=legacy_draft_data({
                 "unit": "Estudio de streaming",
                 "area": "Audio",
                 "location_context": "Estudio de streaming",
@@ -204,7 +206,7 @@ class ConversationDataQualityTests(TestCase):
                     "No permite realizar el streaming."
                 ),
                 "priority": Incident.Priority.CRITICAL,
-            },
+            }),
             missing_fields=[],
             last_question=(
                 "¿Confirmas la creación del incidente?"
@@ -259,7 +261,7 @@ class ConversationDataQualityTests(TestCase):
         draft = IncidentDraft.objects.create(
             technician=self.reporter,
             status=IncidentDraft.Status.READY,
-            extracted_data={
+            extracted_data=legacy_draft_data({
                 "unit": "Estudio de streaming",
                 "area": "Audio",
                 "location_context": "Estudio de streaming",
@@ -273,7 +275,7 @@ class ConversationDataQualityTests(TestCase):
                     "No permite realizar el streaming."
                 ),
                 "priority": Incident.Priority.CRITICAL,
-            },
+            }),
             missing_fields=[],
             last_question=(
                 "¿Confirmas la creación del incidente?"
@@ -359,7 +361,7 @@ class ConversationDataQualityTests(TestCase):
         draft = IncidentDraft.objects.create(
             technician=self.reporter,
             status=IncidentDraft.Status.COLLECTING,
-            extracted_data={
+            extracted_data=legacy_draft_data({
                 "unit": "Estudio de streaming",
                 "area": "Audio",
                 "location_context": "Estudio de streaming",
@@ -373,7 +375,7 @@ class ConversationDataQualityTests(TestCase):
                     "No permite realizar el streaming."
                 ),
                 "priority": Incident.Priority.CRITICAL,
-            },
+            }),
             missing_fields=[],
             last_question=(
                 "De acuerdo. Indícame qué dato quieres corregir "
@@ -437,7 +439,7 @@ class ConversationDataQualityTests(TestCase):
         draft = IncidentDraft.objects.create(
             technician=self.reporter,
             status=IncidentDraft.Status.READY,
-            extracted_data={
+            extracted_data=legacy_draft_data({
                 "unit": "Estadio Nacional",
                 "area": "Producción",
                 "location_context": "Estadio Nacional",
@@ -452,7 +454,7 @@ class ConversationDataQualityTests(TestCase):
                     "Obliga a ocupar otra cámara."
                 ),
                 "priority": Incident.Priority.HIGH,
-            },
+            }),
             missing_fields=[],
             last_question=(
                 "¿Confirmas la creación del incidente?"
@@ -563,7 +565,7 @@ class ConversationDataQualityTests(TestCase):
         draft = IncidentDraft.objects.create(
             technician=self.reporter,
             status=IncidentDraft.Status.READY,
-            extracted_data={
+            extracted_data=legacy_draft_data({
                 "unit": "Estadio Nacional",
                 "area": "Producción",
                 "location_context": "Estadio Nacional",
@@ -578,7 +580,7 @@ class ConversationDataQualityTests(TestCase):
                     "Obliga a ocupar otra cámara."
                 ),
                 "priority": Incident.Priority.HIGH,
-            },
+            }),
             missing_fields=[],
             last_question=(
                 "¿Confirmas la creación del incidente?"
@@ -703,7 +705,7 @@ class ConversationDataQualityTests(TestCase):
         IncidentDraft.objects.create(
             technician=self.reporter,
             status=IncidentDraft.Status.COLLECTING,
-            extracted_data={
+            extracted_data=legacy_draft_data({
                 "unit": "Estudio de streaming",
                 "area": None,
                 "location_context": "Estudio de streaming",
@@ -713,7 +715,7 @@ class ConversationDataQualityTests(TestCase):
                 "description": None,
                 "operational_impact": None,
                 "priority": None,
-            },
+            }),
             missing_fields=[
                 "area",
                 "equipment",
@@ -762,7 +764,7 @@ class ConversationDataQualityTests(TestCase):
         IncidentDraft.objects.create(
             technician=self.reporter,
             status=IncidentDraft.Status.COLLECTING,
-            extracted_data={
+            extracted_data=legacy_draft_data({
                 "unit": "Estudio de streaming",
                 "area": "Audio",
                 "location_context": "Estudio de streaming",
@@ -772,7 +774,7 @@ class ConversationDataQualityTests(TestCase):
                 "description": None,
                 "operational_impact": None,
                 "priority": None,
-            },
+            }),
             missing_fields=[
                 "equipment",
                 "failure_type",
@@ -885,7 +887,7 @@ class ConversationDataQualityTests(TestCase):
         )
 
         self.assertIn(
-            "Cámara 3",
+            "identificador",
             processing["reply"],
         )
 
@@ -908,7 +910,7 @@ class ConversationDataQualityTests(TestCase):
                 IncidentDraft.objects.create(
                     technician=self.reporter,
                     status=IncidentDraft.Status.COLLECTING,
-                    extracted_data={
+                    extracted_data=legacy_draft_data({
                         "unit": None,
                         "area": "Producción",
                         "location_context": None,
@@ -918,7 +920,7 @@ class ConversationDataQualityTests(TestCase):
                         "description": None,
                         "operational_impact": None,
                         "priority": None,
-                    },
+                    }),
                     missing_fields=[
                         "location_context",
                         "failure_type",
@@ -984,7 +986,7 @@ class ConversationDataQualityTests(TestCase):
                 IncidentDraft.objects.create(
                     technician=self.reporter,
                     status=IncidentDraft.Status.COLLECTING,
-                    extracted_data={
+                    extracted_data=legacy_draft_data({
                         "unit": "Estudio 6",
                         "area": "Producción",
                         "location_context": "Estudio 6",
@@ -996,7 +998,7 @@ class ConversationDataQualityTests(TestCase):
                         ),
                         "operational_impact": None,
                         "priority": None,
-                    },
+                    }),
                     missing_fields=[
                         "operational_impact",
                         "priority",

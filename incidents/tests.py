@@ -1,3 +1,5 @@
+from incidents.conversation_test_support import LegacyBranchFixture, with_test_branch, legacy_draft_data
+
 from types import SimpleNamespace
 from django.test import TestCase, override_settings
 
@@ -32,7 +34,7 @@ from incidents.services.incoming_message_service import (
 
 
 @override_settings(AI_PROVIDER="mock")
-class IncomingMessageServiceTests(TestCase):
+class IncomingMessageServiceTests(LegacyBranchFixture, TestCase):
     def setUp(self):
         self.technician = Technician.objects.create(
             full_name="Técnico de prueba",
@@ -56,8 +58,8 @@ class IncomingMessageServiceTests(TestCase):
             external_chat_id="123456789",
             external_message_id="123456789:1",
             text=(
-                "Área Producción, la cámara de la unidad móvil 9 "
-                "no enciende y detiene la producción, prioridad alta"
+                with_test_branch("Área Producción, la cámara de la unidad móvil 9 "
+                "no enciende y detiene la producción, prioridad alta")
             ),
             raw_payload={
                 "test": True,
@@ -102,7 +104,7 @@ class IncomingMessageServiceTests(TestCase):
             external_user_id="123456789",
             external_chat_id="123456789",
             external_message_id="123456789:1-equipment",
-            text="Cámara 3",
+            text=with_test_branch("Cámara 3"),
             raw_payload={
                 "test": True,
             },
@@ -146,7 +148,7 @@ class IncomingMessageServiceTests(TestCase):
             external_user_id="123456789",
             external_chat_id="123456789",
             external_message_id="123456789:1-confirm",
-            text="Sí",
+            text=with_test_branch("Sí"),
             raw_payload={
                 "test": True,
             },
@@ -231,8 +233,8 @@ class IncomingMessageServiceTests(TestCase):
             external_chat_id="123456789",
             external_message_id="123456789:priority-1",
             text=(
-                "Área Producción, la cámara 3 de la unidad móvil 9 "
-                "no enciende y detiene la producción"
+                with_test_branch("Área Producción, la cámara 3 de la unidad móvil 9 "
+                "no enciende y detiene la producción")
             ),
             raw_payload={
                 "test": True,
@@ -265,7 +267,7 @@ class IncomingMessageServiceTests(TestCase):
             external_user_id="123456789",
             external_chat_id="123456789",
             external_message_id="123456789:priority-2",
-            text="Alta",
+            text=with_test_branch("Alta"),
             raw_payload={
                 "test": True,
             },
@@ -302,7 +304,7 @@ class IncomingMessageServiceTests(TestCase):
             external_user_id="123456789",
             external_chat_id="123456789",
             external_message_id="123456789:priority-3",
-            text="Sí",
+            text=with_test_branch("Sí"),
             raw_payload={
                 "test": True,
             },
@@ -332,8 +334,8 @@ class IncomingMessageServiceTests(TestCase):
             external_chat_id="123456789",
             external_message_id="123456789:2",
             text=(
-                "Área Producción, la cámara 3 de la unidad móvil 10 "
-                "no enciende y detiene la producción, prioridad alta"
+                with_test_branch("Área Producción, la cámara 3 de la unidad móvil 10 "
+                "no enciende y detiene la producción, prioridad alta")
             ),
             raw_payload={
                 "test": True,
@@ -346,8 +348,8 @@ class IncomingMessageServiceTests(TestCase):
             external_chat_id="123456789",
             external_message_id="123456789:2",
             text=(
-                "La cámara 3 de la unidad móvil 10 no enciende, "
-                "prioridad alta"
+                with_test_branch("La cámara 3 de la unidad móvil 10 no enciende, "
+                "prioridad alta")
             ),
             raw_payload={
                 "test": True,
@@ -391,7 +393,7 @@ class IncomingMessageServiceTests(TestCase):
             external_user_id="123456789",
             external_chat_id="123456789",
             external_message_id="123456789:2-confirm",
-            text="Sí",
+            text=with_test_branch("Sí"),
             raw_payload={
                 "test": True,
             },
@@ -412,7 +414,7 @@ class IncomingMessageServiceTests(TestCase):
             external_user_id="123456789",
             external_chat_id="123456789",
             external_message_id="123456789:3",
-            text="La consola no funciona",
+            text=with_test_branch("La consola no funciona"),
             raw_payload={
                 "test": True,
             },
@@ -474,7 +476,7 @@ class IncomingMessageServiceTests(TestCase):
             external_user_id="123456789",
             external_chat_id="123456789",
             external_message_id="123456789:4",
-            text="La consola principal no funciona",
+            text=with_test_branch("La consola principal no funciona"),
             raw_payload={
                 "test": True,
             },
@@ -488,8 +490,8 @@ class IncomingMessageServiceTests(TestCase):
             external_chat_id="123456789",
             external_message_id="123456789:5",
             text=(
-                "Área Audio, Unidad móvil 12, "
-                "obliga a usar un respaldo"
+                with_test_branch("Área Audio, Unidad móvil 12, "
+                "obliga a usar un respaldo")
             ),
             raw_payload={
                 "test": True,
@@ -519,7 +521,7 @@ class IncomingMessageServiceTests(TestCase):
             external_user_id="123456789",
             external_chat_id="123456789",
             external_message_id="123456789:6",
-            text="Media",
+            text=with_test_branch("Media"),
             raw_payload={
                 "test": True,
             },
@@ -561,7 +563,7 @@ class IncomingMessageServiceTests(TestCase):
             external_user_id="123456789",
             external_chat_id="123456789",
             external_message_id="123456789:7",
-            text="Sí",
+            text=with_test_branch("Sí"),
             raw_payload={
                 "test": True,
             },
@@ -638,8 +640,8 @@ class IncomingMessageServiceTests(TestCase):
             external_chat_id="123456789",
             external_message_id="123456789:urgent-1",
             text=(
-                "Área Producción, la cámara 3 de la unidad móvil 7 "
-                "no enciende y obliga a usar un respaldo"
+                with_test_branch("Área Producción, la cámara 3 de la unidad móvil 7 "
+                "no enciende y obliga a usar un respaldo")
             ),
             raw_payload={
                 "test": True,
@@ -656,7 +658,7 @@ class IncomingMessageServiceTests(TestCase):
             external_user_id="123456789",
             external_chat_id="123456789",
             external_message_id="123456789:urgent-2",
-            text="Es muy urgente",
+            text=with_test_branch("Es muy urgente"),
             raw_payload={
                 "test": True,
             },
@@ -690,8 +692,8 @@ class IncomingMessageServiceTests(TestCase):
             external_chat_id="123456789",
             external_message_id="123456789:direct-impact-1",
             text=(
-                "Área Audio. En el Estudio 4, el micrófono 2 "
-                "presenta audio cortado."
+                with_test_branch("Área Audio. En el Estudio 4, el micrófono 2 "
+                "presenta audio cortado.")
             ),
             raw_payload={
                 "test": True,
@@ -715,8 +717,8 @@ class IncomingMessageServiceTests(TestCase):
             external_chat_id="123456789",
             external_message_id="123456789:direct-impact-2",
             text=(
-                "La grabación puede continuar usando "
-                "un micrófono de respaldo."
+                with_test_branch("La grabación puede continuar usando "
+                "un micrófono de respaldo.")
             ),
             raw_payload={
                 "test": True,
@@ -758,8 +760,8 @@ class IncomingMessageServiceTests(TestCase):
             external_chat_id="123456789",
             external_message_id="123456789:unrelated-1",
             text=(
-                "Área Audio. En el Estudio 4, un micrófono "
-                "presenta ruido constante."
+                with_test_branch("Área Audio. En el Estudio 4, un micrófono "
+                "presenta ruido constante.")
             ),
             raw_payload={
                 "test": True,
@@ -779,7 +781,7 @@ class IncomingMessageServiceTests(TestCase):
             external_user_id="123456789",
             external_chat_id="123456789",
             external_message_id="123456789:unrelated-2",
-            text="Tengo hambre",
+            text=with_test_branch("Tengo hambre"),
             raw_payload={
                 "test": True,
             },
@@ -819,7 +821,7 @@ class IncomingMessageServiceTests(TestCase):
             external_user_id="123456789",
             external_chat_id="123456789",
             external_message_id="123456789:equipment-correction-1",
-            text="La consola no funciona",
+            text=with_test_branch("La consola no funciona"),
             raw_payload={
                 "test": True,
             },
@@ -829,7 +831,7 @@ class IncomingMessageServiceTests(TestCase):
             pk=first_result["processing"]["draft_id"],
         )
 
-        draft.extracted_data = {
+        draft.extracted_data = legacy_draft_data({
             "unit": "Estudio 3",
             "area": "Audio",
             "location_context": "Estudio 3",
@@ -845,7 +847,7 @@ class IncomingMessageServiceTests(TestCase):
                 "un micrófono de respaldo."
             ),
             "priority": Incident.Priority.MEDIUM,
-        }
+        })
         draft.missing_fields = []
         draft.last_question = (
             "¿Confirmas la creación del incidente?"
@@ -866,7 +868,7 @@ class IncomingMessageServiceTests(TestCase):
             external_user_id="123456789",
             external_chat_id="123456789",
             external_message_id="123456789:equipment-correction-2",
-            text="No",
+            text=with_test_branch("No"),
             raw_payload={
                 "test": True,
             },
@@ -877,7 +879,7 @@ class IncomingMessageServiceTests(TestCase):
             external_user_id="123456789",
             external_chat_id="123456789",
             external_message_id="123456789:equipment-correction-3",
-            text="El equipo correcto es Micrófono 6.",
+            text=with_test_branch("El equipo correcto es Micrófono 6."),
             raw_payload={
                 "test": True,
             },
@@ -913,7 +915,7 @@ class IncomingMessageServiceTests(TestCase):
             external_user_id="123456789",
             external_chat_id="123456789",
             external_message_id="123456789:location-correction-1",
-            text="La consola no funciona",
+            text=with_test_branch("La consola no funciona"),
             raw_payload={
                 "test": True,
             },
@@ -923,7 +925,7 @@ class IncomingMessageServiceTests(TestCase):
             pk=first_result["processing"]["draft_id"],
         )
 
-        draft.extracted_data = {
+        draft.extracted_data = legacy_draft_data({
             "unit": "Estudio 1",
             "area": "Audio",
             "location_context": "Estudio 1",
@@ -939,7 +941,7 @@ class IncomingMessageServiceTests(TestCase):
                 "un micrófono de respaldo."
             ),
             "priority": Incident.Priority.MEDIUM,
-        }
+        })
         draft.missing_fields = []
         draft.last_question = (
             "¿Confirmas la creación del incidente?"
@@ -960,7 +962,7 @@ class IncomingMessageServiceTests(TestCase):
             external_user_id="123456789",
             external_chat_id="123456789",
             external_message_id="123456789:location-correction-2",
-            text="No",
+            text=with_test_branch("No"),
             raw_payload={
                 "test": True,
             },
@@ -971,7 +973,7 @@ class IncomingMessageServiceTests(TestCase):
             external_user_id="123456789",
             external_chat_id="123456789",
             external_message_id="123456789:location-correction-3",
-            text="En realidad es en el Estudio 2.",
+            text=with_test_branch("En realidad es en el Estudio 2."),
             raw_payload={
                 "test": True,
             },
@@ -1010,7 +1012,7 @@ class IncomingMessageServiceTests(TestCase):
             external_user_id="123456789",
             external_chat_id="123456789",
             external_message_id="123456789:area-normalization-1",
-            text="La consola no funciona",
+            text=with_test_branch("La consola no funciona"),
             raw_payload={
                 "test": True,
             },
@@ -1020,7 +1022,7 @@ class IncomingMessageServiceTests(TestCase):
             pk=first_result["processing"]["draft_id"],
         )
 
-        draft.extracted_data = {
+        draft.extracted_data = legacy_draft_data({
             "unit": "Estudio 3",
             "area": None,
             "location_context": "Estudio 3",
@@ -1033,7 +1035,7 @@ class IncomingMessageServiceTests(TestCase):
             ),
             "operational_impact": "Permite continuar operando",
             "priority": Incident.Priority.MEDIUM,
-        }
+        })
         draft.missing_fields = ["area"]
         draft.last_question = (
             "¿A qué área corresponde el incidente?"
@@ -1054,7 +1056,7 @@ class IncomingMessageServiceTests(TestCase):
             external_user_id="123456789",
             external_chat_id="123456789",
             external_message_id="123456789:area-normalization-2",
-            text="Áudio",
+            text=with_test_branch("Áudio"),
             raw_payload={
                 "test": True,
             },
@@ -1081,7 +1083,7 @@ class IncomingMessageServiceTests(TestCase):
             external_user_id="123456789",
             external_chat_id="123456789",
             external_message_id="123456789:connection-failure-1",
-            text="La consola no funciona",
+            text=with_test_branch("La consola no funciona"),
             raw_payload={
                 "test": True,
             },
@@ -1091,7 +1093,7 @@ class IncomingMessageServiceTests(TestCase):
             pk=first_result["processing"]["draft_id"],
         )
 
-        draft.extracted_data = {
+        draft.extracted_data = legacy_draft_data({
             "unit": "Estudio 2",
             "area": "Audio",
             "location_context": "Estudio 2",
@@ -1104,7 +1106,7 @@ class IncomingMessageServiceTests(TestCase):
             ),
             "operational_impact": "Interrumpe la grabación",
             "priority": Incident.Priority.HIGH,
-        }
+        })
         draft.missing_fields = ["failure_type"]
         draft.last_question = (
             "¿Qué problema presenta exactamente el equipo?"
@@ -1125,7 +1127,7 @@ class IncomingMessageServiceTests(TestCase):
             external_user_id="123456789",
             external_chat_id="123456789",
             external_message_id="123456789:connection-failure-2",
-            text="No se conecta a la consola",
+            text=with_test_branch("No se conecta a la consola"),
             raw_payload={
                 "test": True,
             },
@@ -1152,7 +1154,7 @@ class IncomingMessageServiceTests(TestCase):
             external_user_id="123456789",
             external_chat_id="123456789",
             external_message_id="123456789:impact-symptom-1",
-            text="La consola no funciona",
+            text=with_test_branch("La consola no funciona"),
             raw_payload={
                 "test": True,
             },
@@ -1162,7 +1164,7 @@ class IncomingMessageServiceTests(TestCase):
             pk=first_result["processing"]["draft_id"],
         )
 
-        draft.extracted_data = {
+        draft.extracted_data = legacy_draft_data({
             "unit": "Estudio 2",
             "area": "Audio",
             "location_context": "Estudio 2",
@@ -1174,7 +1176,7 @@ class IncomingMessageServiceTests(TestCase):
             ),
             "operational_impact": None,
             "priority": Incident.Priority.HIGH,
-        }
+        })
         draft.missing_fields = ["operational_impact"]
         draft.last_question = (
             "¿Qué impacto operacional está generando la falla?"
@@ -1195,7 +1197,7 @@ class IncomingMessageServiceTests(TestCase):
             external_user_id="123456789",
             external_chat_id="123456789",
             external_message_id="123456789:impact-symptom-2",
-            text="No se puede escuchar el retorno",
+            text=with_test_branch("No se puede escuchar el retorno"),
             raw_payload={
                 "test": True,
             },
@@ -1229,7 +1231,7 @@ class IncomingMessageServiceTests(TestCase):
             external_user_id="123456789",
             external_chat_id="123456789",
             external_message_id="123456789:clean-impact-1",
-            text="La consola no funciona",
+            text=with_test_branch("La consola no funciona"),
             raw_payload={
                 "test": True,
             },
@@ -1239,7 +1241,7 @@ class IncomingMessageServiceTests(TestCase):
             pk=first_result["processing"]["draft_id"],
         )
 
-        draft.extracted_data = {
+        draft.extracted_data = legacy_draft_data({
             "unit": "Estudio 2",
             "area": "Audio",
             "location_context": "Estudio 2",
@@ -1251,7 +1253,7 @@ class IncomingMessageServiceTests(TestCase):
             ),
             "operational_impact": None,
             "priority": Incident.Priority.HIGH,
-        }
+        })
         draft.missing_fields = ["operational_impact"]
         draft.last_question = (
             "¿Qué impacto operacional está generando la falla?"
@@ -1272,7 +1274,7 @@ class IncomingMessageServiceTests(TestCase):
             external_user_id="123456789",
             external_chat_id="123456789",
             external_message_id="123456789:clean-impact-2",
-            text="Sí, interrumpe la grabación",
+            text=with_test_branch("Sí, interrumpe la grabación"),
             raw_payload={
                 "test": True,
             },
@@ -1303,7 +1305,7 @@ class IncomingMessageServiceTests(TestCase):
             external_user_id="123456789",
             external_chat_id="123456789",
             external_message_id="123456789:ambiguous-equipment-1",
-            text="La consola no funciona",
+            text=with_test_branch("La consola no funciona"),
             raw_payload={
                 "test": True,
             },
@@ -1313,7 +1315,7 @@ class IncomingMessageServiceTests(TestCase):
             pk=first_result["processing"]["draft_id"],
         )
 
-        draft.extracted_data = {
+        draft.extracted_data = legacy_draft_data({
             "unit": "Estudio 2",
             "area": "Audio",
             "location_context": "Estudio 2",
@@ -1326,7 +1328,7 @@ class IncomingMessageServiceTests(TestCase):
             ),
             "operational_impact": "Interrumpe la grabación",
             "priority": Incident.Priority.HIGH,
-        }
+        })
         draft.missing_fields = ["equipment"]
         draft.last_question = "¿Qué equipo presenta la falla?"
         draft.status = IncidentDraft.Status.COLLECTING
@@ -1346,8 +1348,8 @@ class IncomingMessageServiceTests(TestCase):
             external_chat_id="123456789",
             external_message_id="123456789:ambiguous-equipment-2",
             text=(
-                "Es el equipo de audio, "
-                "no se pueden conectar a la consola"
+                with_test_branch("Es el equipo de audio, "
+                "no se pueden conectar a la consola")
             ),
             raw_payload={
                 "test": True,
@@ -1445,7 +1447,7 @@ class IncomingMessageServiceTests(TestCase):
 
         draft = IncidentDraft.objects.create(
             technician=self.technician,
-            extracted_data={
+            extracted_data=legacy_draft_data({
                 "unit": "Estudio 2",
                 "area": "Audio",
                 "location_context": "Estudio 2",
@@ -1460,7 +1462,7 @@ class IncomingMessageServiceTests(TestCase):
                     "Interrumpe la grabación"
                 ),
                 "priority": Incident.Priority.HIGH,
-            },
+            }),
             missing_fields=["failure_type"],
             last_question=original_question,
             status=IncidentDraft.Status.COLLECTING,
@@ -1475,7 +1477,7 @@ class IncomingMessageServiceTests(TestCase):
             technician=self.technician,
             direction=ChannelMessage.Direction.INBOUND,
             message_type=ChannelMessage.MessageType.TEXT,
-            content="El retorno desaparece por completo",
+            content=with_test_branch("El retorno desaparece por completo"),
             raw_payload={
                 "test": True,
             },
@@ -1529,7 +1531,7 @@ class IncomingMessageServiceTests(TestCase):
             technician=self.technician,
             direction=ChannelMessage.Direction.INBOUND,
             message_type=ChannelMessage.MessageType.TEXT,
-            content="continuar",
+            content=with_test_branch("continuar"),
             raw_payload={
                 "test": True,
             },
@@ -1602,7 +1604,7 @@ class IncomingMessageServiceTests(TestCase):
 
         draft = IncidentDraft.objects.create(
             technician=self.technician,
-            extracted_data={
+            extracted_data=legacy_draft_data({
                 "unit": "Estudio 4",
                 "area": "Audio",
                 "location_context": "Estudio 4",
@@ -1617,7 +1619,7 @@ class IncomingMessageServiceTests(TestCase):
                     "Interrumpe la grabación"
                 ),
                 "priority": Incident.Priority.LOW,
-            },
+            }),
             missing_fields=[],
             last_question=(
                 "De acuerdo. Indícame qué dato quieres corregir "
@@ -1636,8 +1638,8 @@ class IncomingMessageServiceTests(TestCase):
             direction=ChannelMessage.Direction.INBOUND,
             message_type=ChannelMessage.MessageType.TEXT,
             content=(
-                "era que no se conecta a la consola "
-                "me equivoqué"
+                with_test_branch("era que no se conecta a la consola "
+                "me equivoqué")
             ),
             raw_payload={
                 "test": True,
@@ -1711,7 +1713,7 @@ class IncomingMessageServiceTests(TestCase):
 
         draft = IncidentDraft.objects.create(
             technician=self.technician,
-            extracted_data={
+            extracted_data=legacy_draft_data({
                 "unit": "Estudio 4",
                 "area": "Audio",
                 "location_context": "Estudio 4",
@@ -1726,7 +1728,7 @@ class IncomingMessageServiceTests(TestCase):
                     "Interrumpe la grabación"
                 ),
                 "priority": Incident.Priority.LOW,
-            },
+            }),
             missing_fields=[],
             last_question=(
                 "De acuerdo. Indícame qué dato quieres corregir "
@@ -1745,8 +1747,8 @@ class IncomingMessageServiceTests(TestCase):
             direction=ChannelMessage.Direction.INBOUND,
             message_type=ChannelMessage.MessageType.TEXT,
             content=(
-                "era que no se conecta a la consola "
-                "me equivoqué"
+                with_test_branch("era que no se conecta a la consola "
+                "me equivoqué")
             ),
             raw_payload={
                 "test": True,

@@ -1,3 +1,5 @@
+from incidents.conversation_test_support import LegacyBranchFixture, with_test_branch, legacy_draft_data
+
 from django.test import TestCase, override_settings
 
 from incidents.models import Technician, TechnicianChannel
@@ -12,7 +14,7 @@ from incidents.services.incoming_message_service import (
     TELEGRAM_AUTO_REGISTER=True,
     AI_PROVIDER="mock",
 )
-class TelegramAutoRegistrationTests(TestCase):
+class TelegramAutoRegistrationTests(LegacyBranchFixture, TestCase):
     def setUp(self):
         self.service = IncomingMessageService()
         self.user_id = "987654321"
@@ -28,7 +30,7 @@ class TelegramAutoRegistrationTests(TestCase):
             external_user_id=self.user_id,
             external_chat_id=self.user_id,
             external_message_id=message_id,
-            text="Hola, tengo un problema con una cámara",
+            text=with_test_branch("Hola, tengo un problema con una cámara"),
             raw_payload={
                 "message": {
                     "message_id": 1,

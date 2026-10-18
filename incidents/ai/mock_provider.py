@@ -7,6 +7,17 @@ from .schemas import IncidentExtractionResult
 
 class MockAIProvider(AIProvider):
     EQUIPMENT_NAMES = (
+        "trotadora",
+        "elíptica",
+        "bicicleta",
+        "mancuernas",
+        "máquina",
+        "polea",
+        "prensa",
+        "banca",
+        "torniquete",
+        "ducha",
+        "luminaria",
         "cámara",
         "transmisor",
         "router",
@@ -18,6 +29,9 @@ class MockAIProvider(AIProvider):
     )
 
     AREA_NAMES = {
+        "musculacion": "Musculación", "cardio": "Cardio",
+        "peso libre": "Peso libre", "camarines": "Camarines",
+        "recepcion": "Recepción", "salas de clases": "Salas de clases",
         "produccion": "Producción",
         "audio": "Audio",
         "redes": "Redes",
@@ -41,6 +55,8 @@ class MockAIProvider(AIProvider):
     }
 
     FAILURE_PATTERNS = (
+        "hace ruido", "pierde agua", "se detiene", "cable roto", "no gira",
+        "vibra", "está rota", "esta rota", "defectuosa",
         "no enciende",
         "sin señal",
         "se apaga",
@@ -51,6 +67,12 @@ class MockAIProvider(AIProvider):
     )
 
     OPERATIONAL_IMPACT_EXPRESSIONS = {
+        "riesgo de lesiones": "Riesgo de lesiones",
+        "riesgo de caida": "Riesgo de caída",
+        "impide entrenar": "Impide entrenar",
+        "cierre del area": "Cierre del área",
+        "no permite realizar clases": "No permite realizar clases",
+        "no podemos limpiar": "No podemos limpiar",
         "detiene la produccion": "Detiene la producción",
         "afecta la señal": "Afecta la señal",
         "obliga a usar un respaldo": "Obliga a usar un respaldo",
@@ -64,6 +86,8 @@ class MockAIProvider(AIProvider):
         previous_data: dict | None = None,
     ) -> IncidentExtractionResult:
         previous_data = previous_data or {}
+        from incidents.services.gymplanet_conversation import report_type, request_kind
+        kind = report_type(message, previous_data.get("report_type"))
         normalized_message = self._normalize_text(message)
 
         location_context = (
@@ -127,6 +151,7 @@ class MockAIProvider(AIProvider):
         )
 
         extracted_data = {
+            "request_kind": previous_data.get("request_kind") or request_kind(message),
             "unit": unit,
             "area": area,
             "location_context": location_context,
@@ -147,6 +172,10 @@ class MockAIProvider(AIProvider):
             "operational_impact",
             "priority",
         )
+        if kind == "request":
+            description = description or message.strip()
+            extracted_data["description"] = description
+            required_fields = ("request_kind", "description", "operational_impact", "priority")
 
         missing_fields = [
             field_name
@@ -159,6 +188,11 @@ class MockAIProvider(AIProvider):
         )
 
         return IncidentExtractionResult(
+            intent="request_report" if kind == "request" else "incident_report",
+            branch=(re.search(r"\bsucursal\s*:?\s*([^;,\n]+)", message, re.IGNORECASE).group(1).strip()
+                    if re.search(r"\bsucursal\s*:?\s*([^;,\n]+)", message, re.IGNORECASE) else None),
+            report_type=kind,
+            request_kind=previous_data.get("request_kind") or request_kind(message),
             unit=unit,
             area=area,
             location_context=location_context,
@@ -189,6 +223,9 @@ class MockAIProvider(AIProvider):
         )
 
     def _extract_area(self, normalized_message: str):
+        for term in ("musculacion", "cardio", "peso libre", "camarines", "recepcion", "salas de clases"):
+            if re.search(r"\b" + term + r"\b", normalized_message):
+                return self.AREA_NAMES[term]
         area_match = re.search(
             r"\barea(?:\s+de)?\s+"
             r"(produccion|audio|redes|sistemas|transmision|"
@@ -207,6 +244,7 @@ class MockAIProvider(AIProvider):
         normalized_message = self._normalize_text(message)
 
         patterns = (
+            r"\b(?:musculacion|cardio|peso libre|camarines|recepcion|salas de clases)\b",
             r"\bunidad(?:\s+movil)?\s+[a-zA-Z0-9-]+",
             r"\bmovil\s+[a-zA-Z0-9-]+",
             r"\bestudio\s+[a-zA-Z0-9-]+",
@@ -422,15 +460,16 @@ class MockAIProvider(AIProvider):
             return None
 
         questions = {
+            "request_kind": "¿Qué tipo de requerimiento necesitas registrar?",
             "area": (
                 "¿A qué área corresponde el incidente? Indica el área "
-                "operacional o técnica asociada, por ejemplo: Producción, "
-                "Audio, Redes o Sistemas."
+                "de la sede, por ejemplo: Musculación, "
+                "Cardio, Camarines o Recepción."
             ),
             "location_context": (
                 "¿Dónde está ocurriendo la falla? Indica la ubicación "
-                "o contexto operacional, por ejemplo: Estudio 2, "
-                "Control Central, Móvil 7 o plataforma digital."
+                "de la sede, por ejemplo: Cardio, "
+                "Camarines o una sala de clases."
             ),
             "equipment": (
                 "¿Qué equipo presenta la falla?"
@@ -443,7 +482,7 @@ class MockAIProvider(AIProvider):
             ),
             "operational_impact": (
                 "¿Qué impacto operacional está generando la falla? "
-                "Por ejemplo: detiene una producción, afecta la señal, "
+                "Por ejemplo: impide entrenar, obliga a cerrar un área, "
                 "obliga a usar un respaldo o permite continuar operando."
             ),
             "priority": (

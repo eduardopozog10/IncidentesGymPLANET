@@ -7,6 +7,11 @@ La base funcional de inventario, mantenimiento y solicitudes se documenta en
 de historial, traslados, prioridades y validación. Las nuevas migraciones de esa
 etapa requieren revisión antes de aplicarse a la base principal.
 
+El [flujo conversacional Gym Planet](docs/gymplanet-conversation.md) describe
+la selección obligatoria de sucursal, incidencias y solicitudes, confirmación,
+prioridad explícita y recuperación ante errores de IA. La migración adicional
+0015 queda pendiente de revisión para la base principal.
+
 ## Independencia de Secuoya
 
 Esta es una copia independiente de IncidentesCanal13 / Secuoya Chile. El remote esperado es `https://github.com/eduardopozog10/IncidentesGymPLANET.git`.

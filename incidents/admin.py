@@ -248,6 +248,7 @@ class IncidentAdmin(admin.ModelAdmin):
                     "report_type",
                     "gym_asset",
                     "request_category",
+                    "request_kind",
                     "status",
                     "priority",
                 )

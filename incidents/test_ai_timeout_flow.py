@@ -1,3 +1,5 @@
+from incidents.conversation_test_support import LegacyBranchFixture, with_test_branch, legacy_draft_data
+
 from django.test import TestCase
 
 from incidents.ai.schemas import IncidentExtractionResult
@@ -57,7 +59,7 @@ class TimeoutThenSuccessAIProvider:
         )
 
 
-class AITimeoutFlowTests(TestCase):
+class AITimeoutFlowTests(LegacyBranchFixture, TestCase):
     def setUp(self):
         self.technician = Technician.objects.create(
             full_name="Técnico Timeout",
@@ -80,7 +82,7 @@ class AITimeoutFlowTests(TestCase):
             )
         )
 
-    def test_initial_timeout_does_not_create_draft_and_allows_retry(self):
+    def test_initial_timeout_preserves_draft_and_allows_retry(self):
         original_text = (
             "Área Redes, el router de OB7 no tiene conexión "
             "y obliga a usar un respaldo"
@@ -91,7 +93,7 @@ class AITimeoutFlowTests(TestCase):
             external_user_id="timeout-test-user",
             external_chat_id="timeout-test-chat",
             external_message_id="timeout-test-1",
-            text=original_text,
+            text=with_test_branch(original_text),
             raw_payload={
                 "test": True,
             },
@@ -106,20 +108,17 @@ class AITimeoutFlowTests(TestCase):
         self.assertFalse(
             first_processing["incident_created"],
         )
-        self.assertIsNone(
+        self.assertIsNotNone(
             first_processing["draft_id"],
         )
-        self.assertEqual(
-            first_processing["missing_fields"],
-            [],
-        )
+        self.assertIn("priority", first_processing["missing_fields"])
         self.assertEqual(
             Incident.objects.count(),
             0,
         )
         self.assertEqual(
             IncidentDraft.objects.count(),
-            0,
+            1,
         )
 
         first_message = ChannelMessage.objects.get(
@@ -130,7 +129,7 @@ class AITimeoutFlowTests(TestCase):
             first_message.status,
             ChannelMessage.Status.PROCESSED,
         )
-        self.assertIsNone(
+        self.assertIsNotNone(
             first_message.draft,
         )
 
@@ -139,7 +138,7 @@ class AITimeoutFlowTests(TestCase):
             external_user_id="timeout-test-user",
             external_chat_id="timeout-test-chat",
             external_message_id="timeout-test-2",
-            text=original_text,
+            text=with_test_branch(original_text),
             raw_payload={
                 "test": True,
             },
@@ -162,10 +161,7 @@ class AITimeoutFlowTests(TestCase):
             self.ai_provider.call_count,
             2,
         )
-        self.assertEqual(
-            self.ai_provider.received_messages[1],
-            original_text,
-        )
+        self.assertIn(original_text, self.ai_provider.received_messages[1])
         self.assertEqual(
             Incident.objects.count(),
             0,
@@ -189,7 +185,7 @@ class AITimeoutFlowTests(TestCase):
             external_user_id="timeout-test-user",
             external_chat_id="timeout-test-chat",
             external_message_id="timeout-test-3",
-            text="Alta",
+            text=with_test_branch("Alta"),
             raw_payload={
                 "test": True,
             },
@@ -233,7 +229,7 @@ class AITimeoutFlowTests(TestCase):
             external_user_id="timeout-test-user",
             external_chat_id="timeout-test-chat",
             external_message_id="timeout-test-4",
-            text="Sí",
+            text=with_test_branch("Sí"),
             raw_payload={
                 "test": True,
             },

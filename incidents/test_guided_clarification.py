@@ -1,3 +1,5 @@
+from incidents.conversation_test_support import LegacyBranchFixture, with_test_branch, legacy_draft_data
+
 from django.test import TestCase
 
 from incidents.ai.schemas import IncidentExtractionResult
@@ -28,7 +30,7 @@ class FakeAIProvider:
         return self.responses.pop(0)
 
 
-class GuidedClarificationTests(TestCase):
+class GuidedClarificationTests(LegacyBranchFixture, TestCase):
     def setUp(self):
         self.reporter = Technician.objects.create(
             full_name="Reportante de prueba",
@@ -69,7 +71,7 @@ class GuidedClarificationTests(TestCase):
             status=IncidentDraft.Status.COLLECTING,
             last_question=question,
             missing_fields=missing_fields,
-            extracted_data=dict(self.data),
+            extracted_data=legacy_draft_data(dict(self.data)),
         )
 
     def send(
@@ -86,7 +88,7 @@ class GuidedClarificationTests(TestCase):
             external_message_id=(
                 f"guided-{self.message_number}"
             ),
-            text=text,
+            text=with_test_branch(text),
             raw_payload={
                 "test": True,
             },
@@ -126,7 +128,7 @@ class GuidedClarificationTests(TestCase):
         )
 
         self.assertIn(
-            "grabación",
+            "clase",
             result["reply"],
         )
 
@@ -257,7 +259,7 @@ class GuidedClarificationTests(TestCase):
             "Estudio 2",
         )
 
-        self.assertIn(
+        self.assertNotIn(
             "area",
             result["missing_fields"],
         )

@@ -1,7 +1,8 @@
 from django.utils import timezone
 
 from incidents.messaging.factory import get_messaging_provider
-from incidents.models import ChannelMessage, TechnicianChannel
+from incidents.models import ChannelMessage
+from incidents.services.incident_processor import IncidentProcessor
 from incidents.services.incident_draft_service import (
     IncidentDraftService,
 )
@@ -30,13 +31,13 @@ class TelegramUpdateHandler:
             messaging_provider
             or get_messaging_provider(self.PROVIDER)
         )
-        self.incoming_service = (
-            incoming_service
-            or IncomingMessageService()
-        )
         self.draft_service = (
             draft_service
             or IncidentDraftService()
+        )
+        self.incoming_service = (
+            incoming_service
+            or IncomingMessageService(incident_processor=IncidentProcessor(draft_service=self.draft_service))
         )
 
     def handle(self, update: dict) -> dict:
@@ -65,42 +66,6 @@ class TelegramUpdateHandler:
                 "action": "ignored",
                 "reason": "El mensaje no contiene identificadores válidos.",
             }
-
-        if text == "/start":
-            self.messaging_provider.send_text(
-                external_chat_id,
-                (
-                    "Hola. Soy el asistente de Gestión de Incidencias "
-                    "Operativas de Secuoya Chile.\n\n"
-                    "Estoy aquí para ayudarte a registrar una falla "
-                    "o incidente operacional de forma simple.\n\n"
-                    "Para completar el reporte necesitaré conocer:\n\n"
-                    "• Área asociada al incidente.\n"
-                    "• Ubicación o contexto donde ocurre.\n"
-                    "• Equipo o servicio afectado.\n"
-                    "• Síntoma o problema que presenta.\n"
-                    "• Una breve descripción de lo ocurrido.\n"
-                    "• Impacto que genera en la operación.\n"
-                    "• Prioridad: Baja, Media, Alta o Crítica.\n\n"
-                    "Puedes contarme el problema con tus propias palabras. "
-                    "No necesitas entregar todos los datos de una vez; "
-                    "si falta información, te iré haciendo preguntas "
-                    "para completar el reporte.\n\n"
-                    "Cuando quieras, cuéntame qué está ocurriendo.\n\n"
-                    "Si necesitas cancelar un reporte pendiente, "
-                    "escribe /cancelar."
-                ),
-            )
-
-            return {
-                "action": "welcome_sent",
-            }
-
-        if text == "/cancelar":
-            return self._handle_cancel_command(
-                external_user_id=external_user_id,
-                external_chat_id=external_chat_id,
-            )
 
         if not isinstance(text, str) or not text.strip():
             self.messaging_provider.send_text(
@@ -133,7 +98,7 @@ class TelegramUpdateHandler:
                 external_chat_id,
                 (
                     "Tu cuenta de Telegram no está autorizada "
-                    "para registrar incidentes."
+                    "para registrar incidencias y solicitudes."
                 ),
             )
 
@@ -226,7 +191,7 @@ class TelegramUpdateHandler:
             or telegram_message_id is None
             or not isinstance(text, str)
             or not text.strip()
-            or text in {"/start", "/cancelar"}
+            or text.strip().split("@", 1)[0].lower() in {"/start", "/cancelar"}
         ):
             return {
                 "action": "processing_notice_ignored",
@@ -295,62 +260,6 @@ class TelegramUpdateHandler:
             "action": "processing_notice_sent",
             "incoming_message_id": incoming_message.pk,
             "outgoing_message_id": outgoing_message.pk,
-        }
-
-    def _handle_cancel_command(
-        self,
-        *,
-        external_user_id: str,
-        external_chat_id: str,
-    ) -> dict:
-        channel_account = (
-            TechnicianChannel.objects.select_related(
-                "technician"
-            )
-            .filter(
-                provider=self.PROVIDER,
-                external_user_id=external_user_id,
-                is_active=True,
-                technician__is_active=True,
-            )
-            .first()
-        )
-
-        if channel_account is None:
-            self.messaging_provider.send_text(
-                external_chat_id,
-                (
-                    "Tu cuenta de Telegram no está autorizada "
-                    "para registrar incidentes."
-                ),
-            )
-
-            return {
-                "action": "unauthorized_user",
-            }
-
-        draft = self.draft_service.cancel_active_draft(
-            technician=channel_account.technician,
-        )
-
-        if draft is None:
-            self.messaging_provider.send_text(
-                external_chat_id,
-                "No tienes ningún reporte pendiente.",
-            )
-
-            return {
-                "action": "no_active_draft",
-            }
-
-        self.messaging_provider.send_text(
-            external_chat_id,
-            "El reporte pendiente fue cancelado.",
-        )
-
-        return {
-            "action": "draft_cancelled",
-            "draft_id": draft.pk,
         }
 
     def _record_sent_reply(

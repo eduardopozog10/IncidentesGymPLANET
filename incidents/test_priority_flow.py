@@ -1,3 +1,5 @@
+from incidents.conversation_test_support import LegacyBranchFixture, with_test_branch, legacy_draft_data
+
 from django.test import TestCase, override_settings
 
 from incidents.models import (
@@ -12,7 +14,7 @@ from incidents.services.incoming_message_service import (
 
 
 @override_settings(AI_PROVIDER="mock")
-class PriorityFlowTests(TestCase):
+class PriorityFlowTests(LegacyBranchFixture, TestCase):
     def setUp(self):
         self.technician = Technician.objects.create(
             full_name="Técnico Prioridad",
@@ -36,8 +38,8 @@ class PriorityFlowTests(TestCase):
             external_chat_id="priority-test-chat",
             external_message_id="priority-test-1",
             text=(
-                "Área Redes, el router de la unidad móvil 7 "
-                "no funciona y obliga a usar un respaldo"
+                with_test_branch("Área Redes, el router de la unidad móvil 7 "
+                "no funciona y obliga a usar un respaldo")
             ),
             raw_payload={
                 "test": True,
@@ -66,7 +68,7 @@ class PriorityFlowTests(TestCase):
             external_user_id="priority-test-user",
             external_chat_id="priority-test-chat",
             external_message_id="priority-test-2",
-            text="No sé",
+            text=with_test_branch("No sé"),
             raw_payload={
                 "test": True,
             },
@@ -106,7 +108,7 @@ class PriorityFlowTests(TestCase):
             external_user_id="priority-test-user",
             external_chat_id="priority-test-chat",
             external_message_id="priority-test-3",
-            text="Media entonces",
+            text=with_test_branch("Media entonces"),
             raw_payload={
                 "test": True,
             },
@@ -150,7 +152,7 @@ class PriorityFlowTests(TestCase):
             external_user_id="priority-test-user",
             external_chat_id="priority-test-chat",
             external_message_id="priority-test-4",
-            text="Sí",
+            text=with_test_branch("Sí"),
             raw_payload={
                 "test": True,
             },

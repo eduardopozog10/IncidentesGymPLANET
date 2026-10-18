@@ -100,9 +100,11 @@ validar asociaciones, capturar movimientos y proteger el historial en PostgreSQL
 Las validaciones de sucursal bloquean filas relacionadas al asignarlas para evitar
 que un traslado concurrente deje una asociación nueva incoherente.
 
-Las migraciones 0001–0012 permanecen intactas. Las nuevas solo se aplicaron en
-`test_incidentes_gymplanet_db` durante esta entrega. Aplicarlas en la principal
-requiere una revisión y autorización posterior, antes de usar el nuevo Admin.
+Las migraciones 0001–0012 permanecen intactas. Las nuevas se validaron primero en
+`test_incidentes_gymplanet_db` y se aplicaron posteriormente en la principal con
+autorización explícita. La adaptación posterior del asistente se documenta en
+[gymplanet-conversation.md](gymplanet-conversation.md); su migración 0015 sigue
+pendiente de revisión y autorización para la base principal.
 
 Validaciones ejecutadas desde el entorno exclusivo del proyecto:
 

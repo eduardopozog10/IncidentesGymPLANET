@@ -375,6 +375,7 @@ class Incident(models.Model):
         RequestCategory, on_delete=models.PROTECT, related_name="requests",
         null=True, blank=True, verbose_name="categoría de solicitud",
     )
+    request_kind = models.CharField(max_length=150, blank=True, verbose_name="tipo de requerimiento")
     technician = models.ForeignKey(
         Technician,
         on_delete=models.PROTECT,
@@ -383,6 +384,7 @@ class Incident(models.Model):
     )
     unit = models.CharField(
         max_length=150,
+        blank=True,
         verbose_name="unidad",
     )
 
@@ -410,10 +412,12 @@ class Incident(models.Model):
 
     equipment = models.CharField(
         max_length=150,
+        blank=True,
         verbose_name="equipo o servicio afectado",
     )
     failure_type = models.CharField(
         max_length=100,
+        blank=True,
         verbose_name="tipo de falla",
     )
     description = models.TextField(
@@ -473,10 +477,15 @@ class Incident(models.Model):
             models.CheckConstraint(condition=models.Q(gym_asset__isnull=True) | models.Q(branch__isnull=False), name="incident_asset_requires_branch"),
             models.CheckConstraint(condition=models.Q(request_category__isnull=True) | models.Q(report_type="request"), name="request_category_requires_request"),
             models.CheckConstraint(condition=models.Q(priority__in=["low", "medium", "high", "critical"]), name="incident_valid_priority"),
+            models.CheckConstraint(condition=models.Q(report_type="request") | (~models.Q(equipment="") & ~models.Q(failure_type="")), name="incident_technical_fields"),
         ]
 
     def clean(self):
         super().clean()
+        if self.report_type == self.ReportType.INCIDENT:
+            missing = {key: "Este dato es necesario para una incidencia." for key in ("equipment", "failure_type") if not getattr(self, key)}
+            if missing:
+                raise ValidationError(missing)
         if self.branch_area_id is not None:
             if self.branch_id is None:
                 raise ValidationError({

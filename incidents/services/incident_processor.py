@@ -2,14 +2,22 @@ import re
 import unicodedata
 
 from django.db import transaction
+from django.core.exceptions import ValidationError
 from django.utils import timezone
 
 from incidents.ai.factory import get_ai_provider
 from incidents.models import (
+    Branch,
+    BranchArea,
+    GymAsset,
     ChannelMessage,
     Incident,
     IncidentDraft,
+    RequestCategory,
+    Technician,
 )
+from incidents.services.gymplanet_conversation import GymPlanetContext, WELCOME, finish, normalize, process_request
+from incidents.services.incident_draft_service import IncidentDraftService
 from incidents.services.incident_notification_service import (
     send_incident_created_email,
 )
@@ -27,6 +35,12 @@ class IncidentProcessor:
     )
 
     AREA_CANONICAL_LABELS = {
+        "musculacion": "Musculación",
+        "cardio": "Cardio",
+        "peso libre": "Peso libre",
+        "camarines": "Camarines",
+        "recepcion": "Recepción",
+        "salas de clases": "Salas de clases",
         "audio": "Audio",
         "produccion": "Producción",
         "operaciones": "Operaciones",
@@ -48,20 +62,22 @@ class IncidentProcessor:
     PENDING_MESSAGES_KEY = "_pending_messages"
 
     FALLBACK_QUESTIONS = {
+        "branch": "¿A qué sucursal registrada de Gym Planet corresponde el reporte?",
+        "catalog": "Aclara el área o código del equipo de esta sucursal.",
         "area": (
             "¿A qué área corresponde el incidente? Indica el área "
-            "operacional o técnica asociada, por ejemplo: Producción, "
-            "Audio, Redes o Sistemas."
+            "de la sede, por ejemplo: Musculación, "
+            "Cardio, Camarines o Recepción."
         ),
         "location_context": (
             "¿Dónde está ocurriendo la falla? Indica la ubicación "
-            "o contexto operacional, por ejemplo: Estudio 2, "
-            "Control Central, Móvil 7 o plataforma digital."
+            "de la sede, por ejemplo: Cardio, "
+            "Camarines o una sala de clases."
         ),
         "equipment": "¿Qué equipo presenta la falla?",
         "failure_type": (
             "¿Qué problema presenta exactamente el equipo? "
-            "Por ejemplo: pérdida de señal, imagen intermitente, "
+            "Por ejemplo: ruido, pérdida de agua, "
             "no enciende, ruido, cortes u otro síntoma."
         ),
         "description": (
@@ -70,7 +86,7 @@ class IncidentProcessor:
         ),
         "operational_impact": (
             "¿Qué impacto operacional está generando la falla? "
-            "Por ejemplo: detiene una producción, afecta la señal, "
+            "Por ejemplo: impide entrenar, obliga a cerrar un área, "
             "obliga a usar un respaldo o permite continuar operando."
         ),
         "priority": (
@@ -80,19 +96,21 @@ class IncidentProcessor:
     }
 
     GUIDED_QUESTIONS = {
+        "branch": "Indica el nombre o código de una sucursal activa registrada de Gym Planet.",
+        "catalog": "Indica el área o equipo de la sucursal elegida, sin inventar identificadores.",
         "area": (
             "Necesito saber a qué área corresponde la falla. "
-            "Por ejemplo: Producción, Audio o Redes. "
+            "Por ejemplo: Musculación, Cardio o Camarines. "
             "¿A qué área corresponde el incidente?"
         ),
         "location_context": (
             "Me refiero al lugar donde ocurre la falla. "
-            "Por ejemplo: Estudio 2, Control Central o Móvil 7. "
+            "Por ejemplo: Cardio, Camarines o Recepción. "
             "¿Cuál es la ubicación del incidente?"
         ),
         "equipment": (
             "Necesito identificar el equipo o servicio afectado. "
-            "Por ejemplo: Cámara 3, Consola de audio o Router principal. "
+            "Describe la máquina o instalación con los datos que conozcas. "
             "¿Qué equipo presenta la falla?"
         ),
         "failure_type": (
@@ -102,12 +120,12 @@ class IncidentProcessor:
         ),
         "description": (
             "Necesito que describas brevemente qué ocurre. "
-            "Por ejemplo: la imagen se corta durante varios segundos "
+            "Por ejemplo: la trotadora se detiene durante el uso "
             "y luego vuelve. ¿Puedes describir qué está pasando?"
         ),
         "operational_impact": (
             "Me refiero a cómo afecta la falla a tu trabajo. "
-            "Por ejemplo: interrumpe una grabación, obliga a usar "
+            "Por ejemplo: interrumpe una clase, obliga a usar "
             "un respaldo o permite continuar normalmente. "
             "¿Qué impacto operacional tiene?"
         ),
@@ -201,10 +219,10 @@ class IncidentProcessor:
         "• Media: existe afectación, pero la operación puede mantenerse "
         "mediante una alternativa, redundancia o una degradación aceptable.\n"
         "• Alta: una función importante está fuera de servicio o existe un "
-        "impacto significativo en la operación o producción, sin una "
+        "impacto significativo en la sede, sin una "
         "alternativa adecuada.\n"
         "• Crítica: existe una interrupción o riesgo inmediato para la "
-        "emisión, señal, producción en vivo, un servicio esencial o una "
+        "seguridad de usuarios, funcionamiento de la sede, un servicio esencial o una "
         "contingencia operacional severa.\n\n"
         "La prioridad debe ser seleccionada explícitamente por ti. "
         "¿Cuál corresponde: Baja, Media, Alta o Crítica?"
@@ -255,11 +273,49 @@ class IncidentProcessor:
         "esta mal",
     }
 
-    def __init__(self, ai_provider=None):
+    def __init__(self, ai_provider=None, draft_service=None):
         self.ai_provider = ai_provider or get_ai_provider()
+        self.draft_service = draft_service or IncidentDraftService()
 
     @transaction.atomic
     def process(self, message: ChannelMessage):
+        if message.technician_id is None:
+            raise ValueError("El mensaje debe estar asociado a un reportante.")
+        # Serialize drafts per reporter, including concurrent messages from different channels.
+        Technician.objects.select_for_update().get(pk=message.technician_id)
+        draft = IncidentDraft.objects.select_for_update().filter(
+            technician=message.technician,
+            status__in=[IncidentDraft.Status.COLLECTING, IncidentDraft.Status.READY],
+        ).order_by("-updated_at").first()
+        command = message.content.strip().split("@", 1)[0].lower()
+        if command == "/start":
+            return finish(message, action="welcome_sent", draft=draft, reply=WELCOME)
+        if command == "/cancelar":
+            cancelled = self.draft_service.cancel_active_draft(technician=message.technician)
+            return finish(message, action="draft_cancelled" if cancelled else "no_active_draft", draft=cancelled,
+                          reply="El reporte pendiente fue cancelado." if cancelled else "No tienes ningún reporte pendiente.")
+        context = GymPlanetContext(message.content, draft)
+        quick = self._get_quick_conversation_reply(context.parse_text)
+        if quick is not None:
+            return finish(message, action="conversation", draft=draft, reply=quick)
+        if not context.active:
+            return finish(message, action="configuration_required", draft=draft,
+                          reply="Falta configurar sucursales activas de Gym Planet. Solicita al administrador completar la configuración; no se creará ningún reporte.")
+        previous = dict(draft.extracted_data or {}) if draft else {}
+        if draft and (previous.get("branch_id") != (context.branch.pk if context.branch else None)
+                      or previous.get("report_type", "incident") != context.kind):
+            draft.status = IncidentDraft.Status.COLLECTING
+            draft.save(update_fields=["status", "updated_at"])
+        if context.kind == "request":
+            return process_request(self, message, draft, context)
+        original = message.content
+        try:
+            message.content = context.parse_text
+            return self._process_technical_message(message, context)
+        finally:
+            message.content = original
+
+    def _process_technical_message(self, message: ChannelMessage, gym_context):
         if message.technician is None:
             raise ValueError(
                 "El mensaje debe estar asociado a un reportante."
@@ -371,7 +427,7 @@ class IncidentProcessor:
             draft
         )
 
-        direct_draft_result = self._try_process_direct_draft_reply(
+        direct_draft_result = (dict(previous_data), None) if draft and not message.content else self._try_process_direct_draft_reply(
             draft=draft,
             text=message.content,
             previous_data=previous_data,
@@ -463,6 +519,12 @@ class IncidentProcessor:
                     previous_data=previous_data,
                     pending_messages=pending_messages,
                 )
+            except (ValueError, RuntimeError):
+                return self._handle_ai_error(message, draft, previous_data, pending_messages)
+
+            if getattr(extraction, "report_type", None) == "request" and not previous_data.get("report_type"):
+                gym_context.kind = "request"
+                return process_request(self, message, draft, gym_context, initial_extraction=extraction)
 
             if (
                 extraction.intent == "conversation"
@@ -594,6 +656,7 @@ class IncidentProcessor:
                     extraction.clarification_question
                 )
 
+        gym_context.enrich(extracted_data, self, draft)
         extracted_data["asset_category"] = (
             self._refine_asset_category_from_equipment(
                 equipment=extracted_data.get("equipment"),
@@ -646,18 +709,14 @@ class IncidentProcessor:
         ):
             extracted_data["priority"] = None
 
-        missing_fields = [
-            field_name
-            for field_name in self.REQUIRED_FIELDS
-            if not extracted_data.get(field_name)
-        ]
+        missing_fields = gym_context.missing(extracted_data, self.REQUIRED_FIELDS)
 
         if equipment_was_generic:
             clarification_question = (
                 "Necesito identificar con mayor precisión "
                 f"qué {str(generic_equipment).lower()} está afectada. "
                 "Indica su número, nombre o identificador. "
-                f"Por ejemplo: {generic_equipment} 3."
+                "Si no lo conoces, describe cómo reconocer el equipo sin inventar un código."
             )
 
         elif details_were_generic:
@@ -666,9 +725,7 @@ class IncidentProcessor:
             ]
 
         elif missing_fields and not clarification_question:
-            clarification_question = self.FALLBACK_QUESTIONS[
-                missing_fields[0]
-            ]
+            clarification_question = self.FALLBACK_QUESTIONS.get(missing_fields[0])
 
         # Mostrar ejemplos solamente cuando no exista una
         # aclaración más específica para la respuesta recibida.
@@ -685,9 +742,10 @@ class IncidentProcessor:
                 for field in self.REQUIRED_FIELDS
             )
         ):
-            clarification_question = self.GUIDED_QUESTIONS[
-                help_field
-            ]
+            clarification_question = self.GUIDED_QUESTIONS.get(help_field, clarification_question)
+
+        if missing_fields:
+            clarification_question = gym_context.question(missing_fields, clarification_question)
 
         if draft is None:
             draft = IncidentDraft.objects.create(
@@ -1490,17 +1548,33 @@ class IncidentProcessor:
             "No informada",
         )
 
+        if extracted_data.get("report_type") == "request":
+            return (
+                "Antes de crear la solicitud, revisa los datos:\n\n"
+                f"• Tipo: Solicitud operativa\n• Sucursal: {extracted_data.get('branch') or 'Sin confirmar'}\n"
+                f"• Área o contexto: {extracted_data.get('area') or extracted_data.get('location_context') or 'No informado'}\n"
+                f"• Solicitud: {extracted_data.get('request_kind') or 'No informada'}\n"
+                f"• Categoría: {extracted_data.get('request_category') or 'Sin categoría registrada'}\n"
+                f"• Descripción: {description}\n• Justificación o impacto: {operational_impact}\n"
+                f"• Prioridad: {priority}\n\n"
+                "¿Confirmas la creación de la solicitud? Responde Sí para crearla o No para corregir."
+            )
+        noun = "incidente"
+        article = "la" if noun == "solicitud" else "el"
         return (
-            "Antes de crear el incidente, revisa los datos:\n\n"
+            f"Antes de crear {article} {noun}, revisa los datos:\n\n"
+            f"• Tipo: {'Solicitud operativa' if extracted_data.get('report_type') == 'request' else 'Incidencia'}\n"
+            f"• Sucursal: {extracted_data.get('branch') or 'Sin confirmar'}\n"
             f"• Área: {area}\n"
             f"• Ubicación/contexto: {location_context}\n"
             f"• Familia: {asset_category}\n"
             f"• Equipo/servicio: {equipment}\n"
+            f"• Solicitud: {extracted_data.get('request_kind') or 'No corresponde'}\n"
             f"• Síntoma: {failure_type}\n"
             f"• Descripción: {description}\n"
             f"• Impacto operacional: {operational_impact}\n"
             f"• Prioridad: {priority}\n\n"
-            "¿Confirmas la creación del incidente? "
+            f"¿Confirmas la creación {'de la solicitud' if noun == 'solicitud' else 'del incidente'}? "
             "Responde Sí para crearlo o No para corregir "
             "algún dato."
         )
@@ -1517,6 +1591,24 @@ class IncidentProcessor:
             ).items()
             if key != self.PENDING_MESSAGES_KEY
         }
+        context = GymPlanetContext("", draft)
+        checked = context.enrich(dict(extracted_data), self, draft)
+        required = ("request_kind", "description", "operational_impact", "priority") if context.kind == "request" else self.REQUIRED_FIELDS
+        missing = context.missing(checked, required)
+        for field, model in (("branch_id", Branch), ("branch_area_id", BranchArea), ("gym_asset_id", GymAsset), ("request_category_id", RequestCategory)):
+            if checked.get(field):
+                row = model.objects.select_for_update().filter(pk=checked[field], is_active=True).first()
+                if row is None:
+                    missing.append("catalog")
+                elif field in ("branch_area_id", "gym_asset_id") and row.branch_id != checked.get("branch_id"):
+                    missing.append("catalog")
+        changed = any(checked.get(field) != extracted_data.get(field) for field in ("branch_id", "branch_area_id", "gym_asset_id", "request_category_id", "priority"))
+        if missing or changed:
+            draft.status = IncidentDraft.Status.COLLECTING
+            draft.missing_fields = missing or ["catalog"]
+            draft.last_question = context.question(missing, "Cambió un dato del catálogo o falta una elección explícita. Revisa la sucursal, área, equipo y prioridad antes de confirmar nuevamente.")
+            draft.save(update_fields=["status", "missing_fields", "last_question", "updated_at"])
+            return finish(message, draft=draft, data=extracted_data, missing=draft.missing_fields, reply=draft.last_question)
 
         initial_message_content = ""
 
@@ -1525,11 +1617,17 @@ class IncidentProcessor:
                 draft.initial_message.content
             )
 
-        incident = Incident.objects.create(
+        incident = Incident(
             technician=message.technician,
+            branch_id=checked["branch_id"],
+            branch_area_id=checked.get("branch_area_id"),
+            gym_asset_id=checked.get("gym_asset_id"),
+            report_type=checked.get("report_type", "incident"),
+            request_category_id=checked.get("request_category_id"),
+            request_kind=checked.get("request_kind") or "",
             unit=(
                 extracted_data.get("unit")
-                or extracted_data["location_context"]
+                or extracted_data.get("location_context") or ""
             ),
             area=extracted_data.get("area") or "",
             location_context=(
@@ -1541,8 +1639,8 @@ class IncidentProcessor:
                 extracted_data.get("asset_category")
                 or ""
             ),
-            equipment=extracted_data["equipment"],
-            failure_type=extracted_data["failure_type"],
+            equipment=extracted_data.get("equipment") or "",
+            failure_type=extracted_data.get("failure_type") or "",
             description=extracted_data["description"],
             operational_impact=(
                 extracted_data.get("operational_impact")
@@ -1552,6 +1650,14 @@ class IncidentProcessor:
             status=Incident.Status.REPORTED,
             original_message=initial_message_content,
         )
+        try:
+            incident.full_clean()
+        except ValidationError:
+            draft.status = IncidentDraft.Status.COLLECTING
+            draft.last_question = "Hay datos incompletos o inconsistentes. Corrige el reporte antes de confirmar."
+            draft.save(update_fields=["status", "last_question", "updated_at"])
+            return finish(message, draft=draft, data=extracted_data, reply=draft.last_question)
+        incident.save()
 
         draft.incident = incident
         draft.status = IncidentDraft.Status.COMPLETED
@@ -1668,23 +1774,13 @@ class IncidentProcessor:
         pending_messages: list[str],
     ):
         if draft is None:
-            message.status = ChannelMessage.Status.PROCESSED
-            message.processed_at = timezone.now()
-            message.save(
-                update_fields=[
-                    "status",
-                    "processed_at",
-                ]
+            original = ChannelMessage.objects.values_list("content", flat=True).get(pk=message.pk)
+            context = GymPlanetContext(original)
+            previous_data = context.enrich(dict(previous_data), self)
+            draft = IncidentDraft.objects.create(
+                technician=message.technician, initial_message=message,
+                extracted_data=previous_data, status=IncidentDraft.Status.COLLECTING,
             )
-
-            return {
-                "action": "ai_timeout",
-                "incident_created": False,
-                "draft_id": None,
-                "missing_fields": [],
-                "reply": self.AI_TIMEOUT_INITIAL_REPLY,
-                "extracted_data": previous_data,
-            }
 
         saved_pending_messages = list(
             pending_messages
@@ -1739,6 +1835,12 @@ class IncidentProcessor:
             "reply": self.AI_TIMEOUT_REPLY,
             "extracted_data": previous_data,
         }
+
+    def _handle_ai_error(self, message, draft, previous_data, pending_messages):
+        result = self._handle_ai_timeout(message, draft, previous_data, pending_messages)
+        result["action"] = "ai_error"
+        result["reply"] = "No pude interpretar la respuesta. Conservé el borrador y el mensaje; intenta continuar o reformula el dato."
+        return result
 
     def _get_pending_messages(
         self,
@@ -2244,6 +2346,7 @@ class IncidentProcessor:
 
         if field_name == "location_context":
             location_markers = (
+                "cardio", "musculacion", "peso libre", "camarines", "recepcion", "clases",
                 "estudio",
                 "sala",
                 "control",
@@ -2263,6 +2366,7 @@ class IncidentProcessor:
 
         if field_name == "equipment":
             equipment_markers = (
+                "trotadora", "eliptica", "bicicleta", "mancuerna", "polea", "prensa", "ducha", "banca", "torniquete",
                 "camara",
                 "microfono",
                 "consola",
