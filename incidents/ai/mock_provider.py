@@ -7,6 +7,10 @@ from .schemas import IncidentExtractionResult
 
 class MockAIProvider(AIProvider):
     EQUIPMENT_NAMES = (
+        "aire acondicionado",
+        "climatización",
+        "papel higiénico",
+        "colchonetas",
         "trotadora",
         "elíptica",
         "bicicleta",
@@ -120,9 +124,8 @@ class MockAIProvider(AIProvider):
             or self._extract_asset_category(equipment)
         )
 
-        current_failure_type = self._extract_failure_type(
-            normalized_message
-        )
+        from incidents.services.gym_language import failure
+        current_failure_type = failure(message) or self._extract_failure_type(normalized_message)
 
         failure_type = (
             previous_data.get("failure_type")

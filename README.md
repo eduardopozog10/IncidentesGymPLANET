@@ -18,10 +18,14 @@ pruebas HTTP reales sobre Django y PostgreSQL.
 
 La [administración de cuentas y controles de acceso](docs/corporate-accounts-security.md)
 describe la vinculación corporativa y el acceso exclusivo de superusuarios activos.
-La principal tiene **35 migraciones y 22 tablas**, con los reportes históricos
-`SC-000001` y `SC-000002` intactos. La nueva migración **0018 está solo en pruebas**:
-requiere revisión y autorización antes de utilizar esta versión con la principal.
-Los reportes futuros usarán `GP-`; los históricos conservarán `SC-`.
+El [lote 7: marca, conversaciones e inventario](docs/lot7-brand-conversation.md)
+documenta los recursos oficiales, la paleta verificada, las correcciones del
+asistente, el catálogo propuesto y la revisión visual con Django real.
+La principal ya tiene **36 migraciones y 22 tablas**, incluida 0018, aplicada
+antes de este lote. Conserva `SC-000001`, `SC-000002` y `GP-000003`.
+El lote 7 no agrega migraciones ni carga categorías en la principal.
+Los apartados de la primera tarea y el informe del lote 6 conservan su contexto
+histórico; el estado y los comandos actuales están en el informe del lote 7.
 
 ## Independencia de Secuoya
 

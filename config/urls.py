@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.urls import include, path
 
-from incidents.dashboard_views import DashboardView, ReportListView, ReportDetailView, BranchListView, AssetListView
+from incidents.dashboard_views import DashboardView, ReportListView, ReportDetailView, BranchListView, AssetListView, AssetDetailView
 
 
 urlpatterns = [
@@ -13,5 +13,6 @@ urlpatterns = [
     path("dashboard/reports/<int:pk>/", ReportDetailView.as_view(), name="report-detail"),
     path("dashboard/branches/", BranchListView.as_view(), name="dashboard-branches"),
     path("dashboard/assets/", AssetListView.as_view(), name="dashboard-assets"),
+    path("dashboard/assets/<int:pk>/", AssetDetailView.as_view(), name="dashboard-asset-detail"),
     path("api/v1/", include("incidents.urls")),
 ]

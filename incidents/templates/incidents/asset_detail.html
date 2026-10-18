@@ -1,0 +1,22 @@
+{% extends 'incidents/operational_base.html' %}
+{% block subtitle %}{{ asset.name }} · {{ asset.branch.name }} · {{ asset.code }}{% endblock %}
+{% block heading_action %}<a class="button" href="{% url 'dashboard-assets' %}?branch={{ asset.branch_id }}">← Inventario de la sucursal</a>{% endblock %}
+{% block content %}
+<article class="panel">
+<div class="panel-heading"><h2>{{ asset.name }}</h2><span class="badge {% if asset.operational_status == 'out_of_service' %}priority-high{% else %}status-reported{% endif %}">{{ asset.get_operational_status_display }}</span></div>
+<dl class="details">
+<div><dt>Código interno</dt><dd>{{ asset.code }}</dd></div>
+<div><dt>Sucursal / área</dt><dd>{{ asset.branch.name }} · {{ asset.branch_area.name|default:'Sin área registrada' }}</dd></div>
+<div><dt>Categoría</dt><dd>{{ asset.category.name }}</dd></div>
+<div><dt>Registro</dt><dd>{% if asset.is_active %}Activo{% else %}Desactivado{% endif %}</dd></div>
+{% if asset.brand %}<div><dt>Marca</dt><dd>{{ asset.brand }}</dd></div>{% endif %}
+{% if asset.model %}<div><dt>Modelo</dt><dd>{{ asset.model }}</dd></div>{% endif %}
+{% if asset.description %}<div class="wide"><dt>Descripción</dt><dd>{{ asset.description|linebreaksbr }}</dd></div>{% endif %}
+</dl><p class="context-note">Reportar una falla no cambia automáticamente el estado operativo del activo. Su administración requiere autorización explícita.</p>
+</article>
+<section class="panel table-panel"><div class="panel-heading"><h2>Incidencias asociadas</h2><span class="chip">{{ page_obj.paginator.count }} reporte{{ page_obj.paginator.count|pluralize }}</span></div>
+{% include 'incidents/_report_table.html' with reports=page_obj %}{% include 'incidents/_pagination.html' %}</section>
+<section class="panel"><div class="panel-heading"><h2>Historial de mantenimiento</h2></div>
+{% for record in asset.maintenance_records.all %}<article class="maintenance"><strong>{{ record.get_maintenance_type_display }} · {{ record.get_status_display }}</strong><p>{{ record.description }}</p><small>{{ record.branch.name }} · {{ record.performed_at|default:record.created_at|date:'d/m/Y' }}</small></article>
+{% empty %}<p class="empty-inline">Sin mantenimiento registrado para este activo.</p>{% endfor %}</section>
+{% endblock %}

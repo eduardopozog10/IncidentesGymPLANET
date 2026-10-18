@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="dark">
-<title>{{ page_title }} · Gym Planet</title>
+<title>{{ page_title }} · Gym Planet</title><link rel="icon" type="image/png" href="{% static 'incidents/brand/gymplanet-favicon.png' %}">
 <link rel="stylesheet" href="{% static 'incidents/dashboard.css' %}">
 </head>
 <body>
@@ -37,12 +37,7 @@
 <div class="app-shell">
 <aside class="sidebar" aria-label="Navegación principal">
 <a class="brand" href="{% url 'dashboard' %}" aria-label="Gym Planet, inicio">
-<span class="brand-mark">gp<span>•</span>
-</span>
-<span>GYM <b>PLANET</b>
-<small>OPERACIONES · CHILE</small>
-</span>
-</a>
+<span class="brand-logo-frame"><img class="brand-logo" src="{% static 'incidents/brand/gymplanet-logo-color.avif' %}" alt="Gym Planet"></span><span class="brand-caption">OPERACIONES · CHILE</span></a>
 <p class="nav-label">ESPACIO DE TRABAJO</p>
 <nav>
 <a href="{% url 'dashboard' %}" {% if section == 'overview' %}aria-current="page"{% endif %}>

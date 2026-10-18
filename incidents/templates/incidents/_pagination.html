@@ -1,4 +1,4 @@
 <nav class="pagination" aria-label="Páginas de resultados">
-<span>{{ page_obj.paginator.count }} resultados · Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span>
+<span>{{ page_obj.paginator.count }} resultado{{ page_obj.paginator.count|pluralize }} · Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span>
 <div>{% if page_obj.has_previous %}<a class="button compact" href="{% querystring page=page_obj.previous_page_number %}">← Anterior</a>{% endif %}{% if page_obj.has_next %}<a class="button compact" href="{% querystring page=page_obj.next_page_number %}">Siguiente →</a>{% endif %}</div>
 </nav>

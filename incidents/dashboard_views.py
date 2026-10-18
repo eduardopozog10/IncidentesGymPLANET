@@ -158,3 +158,16 @@ class AssetListView(OperationalView):
             assets = assets.none()
         context.update(filters=filters, inventory=True, page_obj=Paginator(assets.order_by("branch__name", "code"), 20).get_page(self.request.GET.get("page")))
         return context
+
+
+class AssetDetailView(OperationalView):
+    template_name = "incidents/asset_detail.html"
+    title = "Historial del activo"
+    section = "assets"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        asset = get_object_or_404(GymAsset.objects.select_related("branch", "branch_area", "category").prefetch_related("maintenance_records__branch"), pk=self.kwargs["pk"])
+        reports = asset.incidents.filter(report_type="incident").select_related("branch", "technician").order_by("-created_at", "-pk")
+        context.update(asset=asset, report_type="incident", page_obj=Paginator(reports, 20).get_page(self.request.GET.get("page")))
+        return context

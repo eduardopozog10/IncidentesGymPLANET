@@ -175,7 +175,7 @@ class IncomingMessageService:
             )
         except Exception as error:
             message.status = ChannelMessage.Status.FAILED
-            message.error_message = str(error)
+            message.error_message = f"Fallo de procesamiento: {error.__class__.__name__}"
             message.save(
                 update_fields=[
                     "status",

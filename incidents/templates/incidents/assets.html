@@ -1,7 +1,7 @@
 {% extends 'incidents/operational_base.html' %}{% block subtitle %}Disponibilidad e historial del equipamiento de tus gimnasios.{% endblock %}{% block content %}{% include 'incidents/_filters.html' %}<section class="panel table-panel">
 <div class="panel-heading">
 <h2>Inventario registrado</h2>
-<span class="chip">{{ page_obj.paginator.count }} activos</span>
+<span class="chip">{{ page_obj.paginator.count }} activo{{ page_obj.paginator.count|pluralize }}</span>
 </div>
 <div class="table-scroll">
 <table>
@@ -18,7 +18,7 @@
 </thead>
 <tbody>{% for asset in page_obj %}<tr>
 <td>
-<strong>{{ asset.name }}</strong>
+<a class="report-code" href="{% url 'dashboard-asset-detail' asset.pk %}">{{ asset.name }}</a>
 <small>{{ asset.code }}{% if not asset.is_active %} · Inactivo{% endif %}</small>
 </td>
 <td>{{ asset.branch.name }}<small>{{ asset.branch_area.name|default:'Sin área registrada' }}</small>
@@ -27,7 +27,7 @@
 <td>
 <span class="badge {% if asset.operational_status == 'out_of_service' %}priority-high{% else %}status-in_progress{% endif %}">{{ asset.get_operational_status_display }}</span>
 </td>
-<td>{{ asset.incident_count }}</td>
+<td><a href="{% url 'dashboard-asset-detail' asset.pk %}">{{ asset.incident_count }} · Ver historial ↗</a></td>
 <td>
 <details>
 <summary>Ver historial</summary>{% for record in asset.maintenance_records.all %}<div class="maintenance">

@@ -1,6 +1,7 @@
 """Catalog resolution and request flow; AI output never supplies database IDs."""
 import re
 import unicodedata
+from incidents.services.gym_language import failure, request_intent, priority_choice, availability
 
 from django.utils import timezone
 
@@ -44,6 +45,12 @@ def matches(records, text):
 
 def report_type(text, previous=None):
     text = normalize(text)
+    if previous and not re.search(r"\b(?:es una incidencia|tipo incidencia|es una solicitud|tipo solicitud)\b", text):
+        return previous
+    if failure(text):
+        return "incident"
+    if request_intent(text):
+        return "request"
     if re.search(r"\b(es una incidencia|tipo incidencia|reportar una falla|reportar un incidente)\b", text):
         return "incident"
     if re.search(r"\b(solicit\w*|reponer|reposicion|comprar|compra|requerimiento|nos faltan|faltan implementos|necesito materiales|necesitamos materiales)\b", text):
@@ -56,12 +63,13 @@ def report_type(text, previous=None):
 def request_kind(text):
     text = normalize(text)
     for pattern, kind in (
-        (r"\b(reponer|reposicion)\b", "Reposición"),
+        (r"\b(?:mantencion|mantenimiento) preventiv[ao]\b", "Mantención preventiva"),
+        (r"\b(reponer|reposicion|se nos acabo|se acabo|nos faltan)\b", "Reposición"),
         (r"\b(comprar|compra)\b", "Compra"),
         (r"\b(limpieza|aseo)\b", "Aseo y limpieza"),
-        (r"\bmantenimiento\b", "Mantenimiento"),
+        (r"\b(mantenimiento|mantencion)(?: preventiv[ao])?\b", "Mantenimiento"),
         (r"\breparacion\b", "Reparación"),
-        (r"\b(implementos|materiales|insumos|accesorios)\b", "Materiales e implementos"),
+        (r"\b(implementos|materiales|insumos|accesorios|mancuernas|colchonetas|papel higienico)\b", "Materiales e implementos"),
     ):
         if re.search(pattern, text):
             return kind
@@ -108,7 +116,9 @@ class GymPlanetContext:
         return "¿A qué sucursal corresponde? Indica nombre o código: " + ", ".join(f"{b.name} ({b.code})" for b in self.active)
 
     def enrich(self, data, processor, draft=None):
-        data["operational_impact"] = data.get("operational_impact") or explicit_operational_impact(self.parse_text)
+        if self.previous.get("_free_asset"):
+            data["_free_asset"] = True
+        data["operational_impact"] = data.get("operational_impact") or availability(self.parse_text) or explicit_operational_impact(self.parse_text)
         gym_areas = {"musculacion", "cardio", "peso libre", "camarines", "recepcion", "salas de clases"}
         if not data.get("location_context") and normalize(data.get("area")) in gym_areas:
             data["location_context"] = data["area"]
@@ -124,9 +134,13 @@ class GymPlanetContext:
             or (draft.status == IncidentDraft.Status.COLLECTING and "prioridad" in normalize(draft.last_question)
                 and not draft.last_question.startswith("Antes de crear"))
         )
-        explicit = processor._extract_explicit_priority(self.parse_text) if (
-            "prioridad" in normalized or waiting or normalized in {"baja", "media", "alta", "critica", "low", "medium", "high", "critical"}
-        ) and not re.search(r"\b(quizas|tal vez|no (?:es|quiero|confirmo|se|estoy seguro|baja|media|alta|critica)|sin confirmar)\b", normalized) else None
+        explicit = priority_choice(self.parse_text)
+        # A labelled priority must satisfy the signed-choice rule. The legacy
+        # parser only helps with natural replies to the pending priority question.
+        if not explicit and "prioridad" not in normalized and waiting and not re.search(
+            r"\b(?:quizas|tal vez|podria|parece|no|sin confirmar)\b", normalized
+        ):
+            explicit = processor._extract_explicit_priority(self.parse_text)
         if explicit:
             data["priority"], data["_priority_explicit"] = explicit, True
         elif "prioridad" in normalized and not processor._is_clarification_request(self.parse_text):
@@ -151,7 +165,7 @@ class GymPlanetContext:
                 self.catalog_issue = "Ese código de área pertenece a otra sucursal. Corrige el área o la sucursal."
         scoped = GymAsset.objects.filter(branch=self.branch)
         asset_evidence = self.parse_text if self.kind == "incident" or data.get("equipment") or re.search(r"\b(equipo|activo|maquina)\b", normalize(self.parse_text)) else ""
-        assets = matches(scoped, asset_evidence) or matches(scoped, data.get("equipment"))
+        assets = [] if data.get("_free_asset") else matches(scoped, asset_evidence) or matches(scoped, data.get("equipment"))
         if len(assets) == 1 and assets[0].is_active:
             asset = assets[0]
             if data.get("branch_area_id") and asset.branch_area_id and data["branch_area_id"] != asset.branch_area_id:
@@ -160,8 +174,8 @@ class GymPlanetContext:
                 data["gym_asset_id"] = asset.pk
                 data["equipment"] = f"{asset.name} ({asset.code})"
         elif assets:
-            self.catalog_issue = "El equipo es ambiguo o está inactivo. Indica un código activo de esta sucursal: " + ", ".join(a.code for a in assets)
-        elif data.get("equipment"):
+            self.catalog_issue = "El equipo es ambiguo o está inactivo. Puedes indicar el código o responder «Continuar sin activo». Códigos activos de esta sucursal: " + ", ".join(a.code for a in assets)
+        elif data.get("equipment") and not data.get("_free_asset"):
             foreign = matches(GymAsset.objects.exclude(branch=self.branch), data["equipment"])
             if foreign and any(normalize(data["equipment"]) == normalize(a.code) for a in foreign):
                 self.catalog_issue = "Ese código de equipo pertenece a otra sucursal. Corrige la sucursal o describe el equipo sin asociarlo."
@@ -190,7 +204,11 @@ class GymPlanetContext:
     def question(self, missing, fallback):
         if "branch" in missing:
             return self.branch_issue or self.branch_question()
-        return self.catalog_issue or fallback
+        if self.catalog_issue:
+            return self.catalog_issue
+        if missing and missing[0] == "operational_impact" and (fallback or "").startswith("¿Qué impacto operacional") :
+            return "¿Qué impacto tiene: sigue disponible para los socios o quedó fuera de servicio? Por ejemplo, pueden seguir entrenando."
+        return fallback
 
 
 def finish(message, *, reply, action="ask_clarification", draft=None, data=None, missing=None):

@@ -116,7 +116,7 @@ class IncidentProcessor:
         ),
         "failure_type": (
             "Necesito saber qué comportamiento anormal observaste. "
-            "Por ejemplo: imagen intermitente, sin audio o no enciende. "
+            "Por ejemplo: ruido, funcionamiento intermitente o no enciende. "
             "¿Qué problema presenta exactamente el equipo?"
         ),
         "description": (
@@ -299,6 +299,13 @@ class IncidentProcessor:
             cancelled = self.draft_service.cancel_active_draft(technician=message.technician, channel_account=message.channel_account)
             return finish(message, action="draft_cancelled" if cancelled else "no_active_draft", draft=cancelled,
                           reply="El reporte pendiente fue cancelado." if cancelled else "No tienes ningún reporte pendiente.")
+        if draft and draft.extracted_data.get("_ai_failures", 0) >= 2 and command in {"continuar", "continua", "seguir"}:
+            from incidents.ai.mock_provider import MockAIProvider
+            if not isinstance(self.ai_provider, MockAIProvider):
+                # No new provider call: only literal extraction, same authorization and final confirmation.
+                return IncidentProcessor(ai_provider=MockAIProvider(), draft_service=self.draft_service).process(message)
+        if draft is None and normalize(message.content) in (self.CONFIRMATION_POSITIVE | self.CONFIRMATION_NEGATIVE | {"continuar", "seguir"}):
+            return finish(message, action="no_active_draft", reply="No tienes un reporte pendiente. Cuéntame una nueva falla o solicitud cuando lo necesites.")
         context = GymPlanetContext(message.content, draft, branch=branch)
         if context.branch_issue or (draft and draft.extracted_data.get("_branch_conflict") and not context.authorized_mention):
             if draft:
@@ -312,6 +319,10 @@ class IncidentProcessor:
         if draft and draft.extracted_data.get("branch_id") != branch.pk:
             return finish(message, action="branch_mismatch", draft=draft,
                           reply="La asociación de la cuenta cambió. El borrador conserva su sucursal original; cancélalo antes de iniciar otro.")
+        from incidents.services.conversation_controls import handle_controls
+        controlled = handle_controls(self, message, draft, context)
+        if controlled is not None:
+            return controlled
         quick = self._get_quick_conversation_reply(context.parse_text)
         if quick is not None:
             return finish(message, action="conversation", draft=draft, reply=quick)
@@ -801,6 +812,14 @@ class IncidentProcessor:
                 ]
             )
 
+        acknowledgment = ""
+        if (correction_mode or self._looks_like_natural_correction_statement(message.content)) and not gym_context.catalog_issue:
+            labels = {"equipment": "el equipo", "area": "el área", "location_context": "la ubicación", "failure_type": "el síntoma", "description": "la descripción", "operational_impact": "el impacto operacional", "priority": "la prioridad"}
+            changed = [field for field in labels if extracted_data.get(field) and extracted_data.get(field) != previous_data.get(field) and field not in missing_fields]
+            if changed:
+                acknowledgment = f"Entendido, actualicé {labels[changed[0]]}.\n\n"
+        if acknowledgment and clarification_question:
+            clarification_question = acknowledgment + clarification_question
         message.draft = draft
 
         if missing_fields:
@@ -862,7 +881,7 @@ class IncidentProcessor:
                 "extracted_data": extracted_data,
             }
 
-        confirmation_reply = self._build_confirmation_reply(
+        confirmation_reply = acknowledgment + self._build_confirmation_reply(
             extracted_data
         )
 
@@ -1746,6 +1765,10 @@ class IncidentProcessor:
                 technician=message.technician, initial_message=message,
                 extracted_data=previous_data, status=IncidentDraft.Status.COLLECTING,
             )
+
+        previous_data["_ai_failures"] = int(previous_data.get("_ai_failures", 0)) + 1
+        message.error_message = "IA: fallo transitorio, borrador conservado."
+        message.save(update_fields=["error_message"])
 
         saved_pending_messages = list(
             pending_messages
@@ -3434,6 +3457,10 @@ class IncidentProcessor:
         if pattern.search(description) is None:
             return
 
+        if extracted_data.get("equipment") == new_value:
+            from incidents.services.conversation_controls import replace_equipment
+            extracted_data["description"] = replace_equipment(description, previous_value, new_value)
+            return
         extracted_data["description"] = (
             pattern.sub(
                 new_value,
