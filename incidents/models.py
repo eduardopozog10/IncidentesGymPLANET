@@ -3,6 +3,39 @@ import uuid
 from django.db import models
 
 
+class Branch(models.Model):
+    name = models.CharField(
+        max_length=150,
+        verbose_name="nombre",
+    )
+    code = models.CharField(
+        max_length=50,
+        unique=True,
+        verbose_name="código",
+    )
+    is_active = models.BooleanField(
+        default=True,
+        verbose_name="activa",
+    )
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name="fecha de creación",
+    )
+    updated_at = models.DateTimeField(
+        auto_now=True,
+        verbose_name="última actualización",
+    )
+
+    class Meta:
+        db_table = "branches"
+        verbose_name = "sucursal"
+        verbose_name_plural = "sucursales"
+        ordering = ["name", "code"]
+
+    def __str__(self):
+        return f"{self.code} - {self.name}"
+
+
 class Technician(models.Model):
     id = models.UUIDField(
         primary_key=True,
@@ -135,6 +168,14 @@ class Incident(models.Model):
         CLOSED = "closed", "Cerrado"
         CANCELLED = "cancelled", "Cancelado"
 
+    branch = models.ForeignKey(
+        Branch,
+        on_delete=models.PROTECT,
+        related_name="incidents",
+        null=True,
+        blank=True,
+        verbose_name="sucursal",
+    )
     technician = models.ForeignKey(
         Technician,
         on_delete=models.PROTECT,

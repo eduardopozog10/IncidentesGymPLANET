@@ -1,12 +1,23 @@
 from django.contrib import admin
 
 from .models import (
+    Branch,
     ChannelMessage,
     Incident,
     IncidentDraft,
     Technician,
     TechnicianChannel,
 )
+
+
+@admin.register(Branch)
+class BranchAdmin(admin.ModelAdmin):
+    list_display = ("name", "code", "is_active", "created_at")
+    list_filter = ("is_active",)
+    search_fields = ("name", "code")
+    readonly_fields = ("created_at", "updated_at")
+    ordering = ("name", "code")
+    list_per_page = 25
 
 
 class TechnicianChannelInline(admin.TabularInline):
@@ -83,6 +94,7 @@ class IncidentAdmin(admin.ModelAdmin):
     list_display = (
         "incident_code",
         "technician",
+        "branch",
         "unit",
         "equipment",
         "failure_type",
@@ -91,11 +103,14 @@ class IncidentAdmin(admin.ModelAdmin):
         "created_at",
     )
     list_filter = (
+        "branch",
         "priority",
         "status",
         "created_at",
     )
     search_fields = (
+        "branch__name",
+        "branch__code",
         "unit",
         "equipment",
         "failure_type",
@@ -111,7 +126,7 @@ class IncidentAdmin(admin.ModelAdmin):
         "updated_at",
         "resolved_at",
     )
-    list_select_related = ("technician",)
+    list_select_related = ("technician", "branch")
     ordering = ("-created_at",)
     date_hierarchy = "created_at"
     list_per_page = 25
@@ -123,6 +138,7 @@ class IncidentAdmin(admin.ModelAdmin):
                 "fields": (
                     "incident_code",
                     "technician",
+                    "branch",
                     "status",
                     "priority",
                 )
