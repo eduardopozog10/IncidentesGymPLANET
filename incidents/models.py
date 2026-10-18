@@ -1,5 +1,6 @@
 import uuid
 
+from django.core.exceptions import ValidationError
 from django.db import models
 
 
@@ -34,6 +35,49 @@ class Branch(models.Model):
 
     def __str__(self):
         return f"{self.code} - {self.name}"
+
+
+class BranchArea(models.Model):
+    branch = models.ForeignKey(
+        Branch,
+        on_delete=models.PROTECT,
+        related_name="areas",
+        verbose_name="sucursal",
+    )
+    name = models.CharField(max_length=150, verbose_name="nombre")
+    code = models.CharField(max_length=50, verbose_name="código interno")
+    is_active = models.BooleanField(default=True, verbose_name="activa")
+    created_at = models.DateTimeField(
+        auto_now_add=True, verbose_name="fecha de creación",
+    )
+    updated_at = models.DateTimeField(
+        auto_now=True, verbose_name="última actualización",
+    )
+
+    class Meta:
+        db_table = "branch_areas"
+        verbose_name = "área de sucursal"
+        verbose_name_plural = "áreas de sucursales"
+        ordering = ["branch__name", "name", "code"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["branch", "code"], name="unique_area_code_per_branch",
+            ),
+            # Referenced by the composite foreign key installed in migration 0012.
+            models.UniqueConstraint(
+                fields=["id", "branch"], name="unique_area_id_branch",
+            ),
+        ]
+
+    def clean(self):
+        super().clean()
+        if self.pk and self.incidents.exclude(branch_id=self.branch_id).exists():
+            raise ValidationError({
+                "branch": "No se puede trasladar un área utilizada por incidencias de otra sucursal.",
+            })
+
+    def __str__(self):
+        return f"{self.branch.code} / {self.code} - {self.name}"
 
 
 class Technician(models.Model):
@@ -143,6 +187,10 @@ class TechnicianChannel(models.Model):
 
 
 class Incident(models.Model):
+    class ReportType(models.TextChoices):
+        INCIDENT = "incident", "Incidencia o falla"
+        REQUEST = "request", "Solicitud operativa"
+
     class AssetCategory(models.TextChoices):
         VIDEO_CAMERAS = "video_cameras", "Video / Cámaras"
         AUDIO = "audio", "Audio"
@@ -175,6 +223,20 @@ class Incident(models.Model):
         null=True,
         blank=True,
         verbose_name="sucursal",
+    )
+    branch_area = models.ForeignKey(
+        BranchArea,
+        on_delete=models.PROTECT,
+        related_name="incidents",
+        null=True,
+        blank=True,
+        verbose_name="área de sucursal",
+    )
+    report_type = models.CharField(
+        max_length=20,
+        choices=ReportType.choices,
+        default=ReportType.INCIDENT,
+        verbose_name="tipo de reporte",
     )
     technician = models.ForeignKey(
         Technician,
@@ -261,6 +323,30 @@ class Incident(models.Model):
         verbose_name = "incidente"
         verbose_name_plural = "incidentes"
         ordering = ["-created_at"]
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(branch_area__isnull=True) | models.Q(branch__isnull=False),
+                name="incident_area_requires_branch",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(report_type__in=["incident", "request"]),
+                name="incident_valid_report_type",
+            ),
+        ]
+
+    def clean(self):
+        super().clean()
+        if self.branch_area_id is not None:
+            if self.branch_id is None:
+                raise ValidationError({
+                    "branch_area": "Selecciona una sucursal antes de asignar un área.",
+                })
+            if not BranchArea.objects.filter(
+                pk=self.branch_area_id, branch_id=self.branch_id,
+            ).exists():
+                raise ValidationError({
+                    "branch_area": "El área debe pertenecer a la sucursal seleccionada.",
+                })
 
     @property
     def code(self):

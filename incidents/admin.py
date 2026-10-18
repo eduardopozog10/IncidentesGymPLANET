@@ -1,7 +1,9 @@
 from django.contrib import admin
 
+from .forms import IncidentAdminForm
 from .models import (
     Branch,
+    BranchArea,
     ChannelMessage,
     Incident,
     IncidentDraft,
@@ -17,6 +19,16 @@ class BranchAdmin(admin.ModelAdmin):
     search_fields = ("name", "code")
     readonly_fields = ("created_at", "updated_at")
     ordering = ("name", "code")
+    list_per_page = 25
+
+
+@admin.register(BranchArea)
+class BranchAreaAdmin(admin.ModelAdmin):
+    list_display = ("name", "code", "branch", "is_active", "created_at")
+    list_filter = ("branch", "is_active")
+    search_fields = ("name", "code", "branch__name", "branch__code")
+    readonly_fields = ("created_at", "updated_at")
+    list_select_related = ("branch",)
     list_per_page = 25
 
 
@@ -91,10 +103,13 @@ class TechnicianChannelAdmin(admin.ModelAdmin):
 
 @admin.register(Incident)
 class IncidentAdmin(admin.ModelAdmin):
+    form = IncidentAdminForm
     list_display = (
         "incident_code",
         "technician",
         "branch",
+        "branch_area",
+        "report_type",
         "unit",
         "equipment",
         "failure_type",
@@ -104,6 +119,8 @@ class IncidentAdmin(admin.ModelAdmin):
     )
     list_filter = (
         "branch",
+        "branch_area",
+        "report_type",
         "priority",
         "status",
         "created_at",
@@ -111,6 +128,8 @@ class IncidentAdmin(admin.ModelAdmin):
     search_fields = (
         "branch__name",
         "branch__code",
+        "branch_area__name",
+        "branch_area__code",
         "unit",
         "equipment",
         "failure_type",
@@ -126,7 +145,7 @@ class IncidentAdmin(admin.ModelAdmin):
         "updated_at",
         "resolved_at",
     )
-    list_select_related = ("technician", "branch")
+    list_select_related = ("technician", "branch", "branch_area__branch")
     ordering = ("-created_at",)
     date_hierarchy = "created_at"
     list_per_page = 25
@@ -139,6 +158,8 @@ class IncidentAdmin(admin.ModelAdmin):
                     "incident_code",
                     "technician",
                     "branch",
+                    "branch_area",
+                    "report_type",
                     "status",
                     "priority",
                 )
@@ -149,6 +170,7 @@ class IncidentAdmin(admin.ModelAdmin):
             {
                 "fields": (
                     "unit",
+                    "area",
                     "equipment",
                     "failure_type",
                     "description",
