@@ -1,0 +1,51 @@
+{% extends 'incidents/operational_base.html' %}{% block subtitle %}Disponibilidad e historial del equipamiento de tus gimnasios.{% endblock %}{% block content %}{% include 'incidents/_filters.html' %}<section class="panel table-panel">
+<div class="panel-heading">
+<h2>Inventario registrado</h2>
+<span class="chip">{{ page_obj.paginator.count }} activos</span>
+</div>
+<div class="table-scroll">
+<table>
+<caption class="sr-only">Equipos y activos registrados</caption>
+<thead>
+<tr>
+<th scope="col">Activo</th>
+<th scope="col">Sucursal / área</th>
+<th scope="col">Categoría</th>
+<th scope="col">Estado operativo</th>
+<th scope="col">Incidencias</th>
+<th scope="col">Mantenimiento</th>
+</tr>
+</thead>
+<tbody>{% for asset in page_obj %}<tr>
+<td>
+<strong>{{ asset.name }}</strong>
+<small>{{ asset.code }}{% if not asset.is_active %} · Inactivo{% endif %}</small>
+</td>
+<td>{{ asset.branch.name }}<small>{{ asset.branch_area.name|default:'Sin área registrada' }}</small>
+</td>
+<td>{{ asset.category.name }}</td>
+<td>
+<span class="badge {% if asset.operational_status == 'out_of_service' %}priority-high{% else %}status-in_progress{% endif %}">{{ asset.get_operational_status_display }}</span>
+</td>
+<td>{{ asset.incident_count }}</td>
+<td>
+<details>
+<summary>Ver historial</summary>{% for record in asset.maintenance_records.all %}<div class="maintenance">
+<strong>{{ record.get_maintenance_type_display }} · {{ record.get_status_display }}</strong>
+<p>{{ record.description }}</p>
+<small>{{ record.branch.name }} · {{ record.created_at|date:'d/m/Y' }}</small>
+</div>{% empty %}<p>Sin mantenimiento registrado.</p>{% endfor %}</details>
+</td>
+</tr>{% empty %}<tr>
+<td colspan="6">
+<div class="empty-state">
+<svg aria-hidden="true">
+<use href="#asset"/>
+</svg>
+<h3>Un lugar para cada equipo</h3>
+<p>El inventario aparecerá al registrar activos autorizados. No se han cargado equipos automáticamente.</p>
+</div>
+</td>
+</tr>{% endfor %}</tbody>
+</table>
+</div>{% include 'incidents/_pagination.html' %}</section>{% endblock %}

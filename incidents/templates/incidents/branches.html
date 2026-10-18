@@ -1,0 +1,31 @@
+{% extends 'incidents/operational_base.html' %}{% block subtitle %}Una visión de cada sede, conectada con el resto de tu red.{% endblock %}{% block content %}{% include 'incidents/_filters.html' %}<section class="branch-grid" aria-label="Sucursales">{% for branch in branches %}<article class="panel branch-card">
+<div class="panel-heading">
+<span class="branch-icon">
+<svg aria-hidden="true">
+<use href="#pin"/>
+</svg>
+</span>
+<span class="badge {% if branch.is_active %}status-resolved{% else %}status-cancelled{% endif %}">{% if branch.is_active %}Activa{% else %}Inactiva{% endif %}</span>
+</div>
+<p class="eyebrow">{{ branch.code }}</p>
+<h2>{{ branch.name }}</h2>
+<div class="branch-stats">
+<div>
+<strong>{{ branch.metrics.incidents }}</strong>
+<span>Incidencias</span>
+</div>
+<div>
+<strong>{{ branch.metrics.requests }}</strong>
+<span>Solicitudes</span>
+</div>
+<div>
+<strong>{{ branch.metrics.open }}</strong>
+<span>Abiertos</span>
+</div>
+</div>
+<a class="button" href="{% url 'dashboard-reports' %}{% querystring branch=branch.pk page=None %}">Ver reportes de la sede ↗</a>
+</article>{% empty %}<article class="panel empty-state">
+<span aria-hidden="true">⌖</span>
+<h2>Tu red comienza aquí</h2>
+<p>No hay sucursales para esta selección. Su registro se realiza de forma autorizada en Django Admin.</p>
+</article>{% endfor %}</section>{% endblock %}

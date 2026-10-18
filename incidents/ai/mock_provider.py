@@ -362,7 +362,8 @@ class MockAIProvider(AIProvider):
             if expression in normalized_message:
                 return operational_impact
 
-        return None
+        from incidents.services.gymplanet_conversation import explicit_operational_impact
+        return explicit_operational_impact(normalized_message)
 
     def _extract_description(
         self,

@@ -11,18 +11,23 @@ El [flujo conversacional Gym Planet](docs/gymplanet-conversation.md) describe
 la sucursal derivada de la cuenta corporativa, incidencias y solicitudes,
 confirmación, prioridad explícita y recuperación ante errores de IA.
 
+El [lote 6: interfaz operativa](docs/lot6-operational-dashboard.md) incorpora un
+centro de control nuevo, incidencias, solicitudes, sucursales, inventario, filtros,
+detalles y seguimiento con protección CSRF. Incluye la revisión visual y las
+pruebas HTTP reales sobre Django y PostgreSQL.
+
 La [administración de cuentas y controles de acceso](docs/corporate-accounts-security.md)
-detalla la vinculación manual en Admin y la política temporal de acceso exclusivo
-para superusuarios activos. La principal tiene 33 migraciones y 22 tablas, incluida
-0015. Las migraciones nuevas 0016/0017 están solo en pruebas y requieren revisión
-y autorización antes de utilizar este código con la principal. Validación: 265
-pruebas aprobadas; no se cargaron sucursales ni cuentas.
+describe la vinculación corporativa y el acceso exclusivo de superusuarios activos.
+La principal tiene **35 migraciones y 22 tablas**, con los reportes históricos
+`SC-000001` y `SC-000002` intactos. La nueva migración **0018 está solo en pruebas**:
+requiere revisión y autorización antes de utilizar esta versión con la principal.
+Los reportes futuros usarán `GP-`; los históricos conservarán `SC-`.
 
 ## Independencia de Secuoya
 
 Esta es una copia independiente de IncidentesCanal13 / Secuoya Chile. El remote esperado es `https://github.com/eduardopozog10/IncidentesGymPLANET.git`.
 
-Se reutilizan Django, PostgreSQL, la API REST, el dashboard, los proveedores de IA, Telegram y el procesador conversacional. La adaptación a gimnasios está pendiente: quedan categorías audiovisuales, códigos `SC-`, textos, logo y pruebas de Secuoya. El paquete sigue llamándose `tvtel-incidentes` en `pyproject.toml` y `uv.lock`.
+Se reutilizan Django, PostgreSQL, la API REST, el dashboard, los proveedores de IA, Telegram y el procesador conversacional. La interfaz operativa ya utiliza Gym Planet. Se conservan categorías audiovisuales y códigos `SC-` históricos por compatibilidad; Django Admin mantiene su diseño existente. El paquete sigue llamándose `tvtel-incidentes` en `pyproject.toml` y `uv.lock`.
 
 No compartir bases, roles PostgreSQL, secretos, bots ni destinatarios reales con Secuoya. No copiar su `.env` ni datos operativos. Trabajar exclusivamente en esta carpeta; no modificar IncidentesCanal13 ni otros proyectos.
 

@@ -1,0 +1,23 @@
+<form method="get" class="filter-panel" aria-label="Filtros de resultados">
+<div class="filter-top"><span class="eyebrow">TU VISTA, A TU MEDIDA</span><a href="{{ request.path }}">Limpiar filtros</a></div>
+{{ filters.non_field_errors }}
+<div class="primary-filters">
+<div class="filter-field">{{ filters.branch.label_tag }}{{ filters.branch }}{{ filters.branch.errors }}</div>
+{% if inventory %}
+<div class="filter-field">{{ filters.category.label_tag }}{{ filters.category }}{{ filters.category.errors }}</div>
+<div class="filter-field">{{ filters.operational_status.label_tag }}{{ filters.operational_status }}{{ filters.operational_status.errors }}</div>
+{% else %}
+<div class="filter-field">{{ filters.date_from.label_tag }}{{ filters.date_from }}{{ filters.date_from.errors }}</div>
+<div class="filter-field">{{ filters.date_to.label_tag }}{{ filters.date_to }}{{ filters.date_to.errors }}</div>
+{% endif %}
+<div class="filter-field search-field">{{ filters.search.label_tag }}{{ filters.search }}{{ filters.search.errors }}</div>
+<div class="filter-submit"><button class="button" type="submit">Aplicar filtros →</button></div>
+</div>
+<details class="advanced-filters" {% if filters.priority.value or filters.status.value or filters.area.value or filters.request_category.value or filters.report_type.value or filters.errors %}open{% endif %}><summary>Más filtros <span>{% if inventory %}Área del equipamiento{% else %}Tipo, prioridad, estado y área{% endif %}</span></summary>
+<div class="filter-grid">
+{% if not inventory and not report_type %}<div class="filter-field">{{ filters.report_type.label_tag }}{{ filters.report_type }}{{ filters.report_type.errors }}</div>{% endif %}
+{% if not inventory %}<div class="filter-field">{{ filters.priority.label_tag }}{{ filters.priority }}{{ filters.priority.errors }}</div>
+<div class="filter-field">{{ filters.status.label_tag }}{{ filters.status }}{{ filters.status.errors }}</div>{% endif %}
+<div class="filter-field">{{ filters.area.label_tag }}{{ filters.area }}{{ filters.area.errors }}</div>
+{% if not inventory and report_type != 'incident' %}<div class="filter-field">{{ filters.request_category.label_tag }}{{ filters.request_category }}{{ filters.request_category.errors }}</div>{% endif %}
+</div></details></form>

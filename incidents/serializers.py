@@ -93,6 +93,12 @@ class IncidentSerializer(serializers.ModelSerializer):
         fields = (
             "id",
             "code",
+            "branch",
+            "branch_area",
+            "report_type",
+            "request_kind",
+            "request_category",
+            "gym_asset",
             "reporter_name",
             "technician_name",
             "area",

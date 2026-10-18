@@ -363,6 +363,8 @@ class Incident(models.Model):
         CLOSED = "closed", "Cerrado"
         CANCELLED = "cancelled", "Cancelado"
 
+    code_prefix = models.CharField(max_length=2, default="GP", editable=False)
+
     branch = models.ForeignKey(
         Branch,
         on_delete=models.PROTECT,
@@ -533,9 +535,9 @@ class Incident(models.Model):
     @property
     def code(self):
         if self.pk is None:
-            return "SC-PENDIENTE"
+            return "GP-PENDIENTE"
 
-        return f"SC-{self.pk:06d}"
+        return f"{self.code_prefix}-{self.pk:06d}"
 
     def __str__(self):
         return f"{self.code} - {self.equipment}"

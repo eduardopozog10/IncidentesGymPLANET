@@ -1,0 +1,72 @@
+{% extends 'incidents/operational_base.html' %}{% block subtitle %}{{ report.code }} · {{ report.get_report_type_display }}{% endblock %}{% block heading_action %}<a class="button" href="{% if report.report_type == 'request' %}{% url 'dashboard-requests' %}{% else %}{% url 'dashboard-incidents' %}{% endif %}">← Volver al listado</a>{% endblock %}{% block content %}<div class="detail-grid">
+<article class="panel detail-main">
+<div class="panel-heading">
+<h2>{{ report.code }}</h2>
+<div>
+<span class="badge priority-{{ report.priority }}">{{ report.get_priority_display }}</span> <span class="badge status-{{ report.status }}">{{ report.get_status_display }}</span>
+</div>
+</div>
+<dl class="details">
+<div>
+<dt>Sucursal</dt>
+<dd>{{ report.branch.name|default:'Sin sucursal histórica' }}</dd>
+</div>
+<div>
+<dt>Área y ubicación</dt>
+<dd>{{ report.branch_area.name|default:report.area|default:'No informada' }}{% if report.location_context %} · {{ report.location_context }}{% endif %}</dd>
+</div>{% if report.report_type == 'request' %}<div>
+<dt>Tipo de solicitud</dt>
+<dd>{{ report.request_kind|default:'No informado' }}</dd>
+</div>
+<div>
+<dt>Categoría</dt>
+<dd>{{ report.request_category.name|default:'Sin categoría registrada' }}</dd>
+</div>{% else %}<div>
+<dt>Equipo o instalación</dt>
+<dd>{{ report.equipment }}</dd>
+</div>
+<div>
+<dt>Falla o síntoma</dt>
+<dd>{{ report.failure_type }}</dd>
+</div>{% endif %}<div class="wide">
+<dt>Descripción{% if report.report_type == 'request' %}, materiales y cantidades informadas{% endif %}</dt>
+<dd class="long-text">{{ report.description|linebreaksbr }}</dd>
+</div>
+<div class="wide">
+<dt>{% if report.report_type == 'request' %}Justificación{% else %}Impacto operacional{% endif %}</dt>
+<dd class="long-text">{{ report.operational_impact|default:'No informado'|linebreaksbr }}</dd>
+</div>
+<div>
+<dt>Reportante / cuenta corporativa</dt>
+<dd>{{ report.technician.full_name }}</dd>
+</div>
+<div>
+<dt>Fecha de creación</dt>
+<dd>{{ report.created_at|date:'d/m/Y · H:i' }}</dd>
+</div>
+</dl>{% if report.report_type == 'request' %}<p class="context-note">Las cantidades se presentan tal como fueron informadas; no se deducen campos adicionales.</p>{% endif %}</article>
+<aside class="panel status-panel">
+<p class="eyebrow">SEGUIMIENTO OPERATIVO</p>
+<h2>Gestionar estado</h2>
+<p class="muted">Actualiza el avance de este reporte.</p>
+<form method="post">{% csrf_token %}{{ status_form.as_p }}<button class="button primary" type="submit">Guardar estado →</button>
+</form>
+<dl class="details single">
+<div>
+<dt>Última actualización</dt>
+<dd>{{ report.updated_at|date:'d/m/Y H:i' }}</dd>
+</div>{% if report.resolved_at %}<div>
+<dt>Resolución</dt>
+<dd>{{ report.resolved_at|date:'d/m/Y H:i' }}</dd>
+</div>{% endif %}</dl>
+</aside>
+</div>
+{% if report.report_type == 'incident' %}<section class="panel">
+<div class="panel-heading">
+<h2>Mantenimiento asociado</h2>
+</div>{% for record in report.maintenance_records.all %}<article class="maintenance">
+<strong>{{ record.asset.name }} · {{ record.get_maintenance_type_display }}</strong>
+<span class="chip">{{ record.get_status_display }}</span>
+<p>{{ record.description }}</p>
+<small>{{ record.responsible|default:'Responsable no informado' }}{% if record.performed_at %} · {{ record.performed_at|date:'d/m/Y' }}{% endif %}</small>
+</article>{% empty %}<p class="empty-inline">Este reporte aún no tiene registros de mantenimiento asociados.</p>{% endfor %}</section>{% endif %}{% endblock %}

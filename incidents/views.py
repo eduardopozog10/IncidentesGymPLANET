@@ -1,4 +1,5 @@
 import secrets
+import re
 import unicodedata
 from datetime import timedelta
 
@@ -25,6 +26,7 @@ from incidents.messaging.telegram_update_handler import (
 )
 from incidents.models import Incident
 from incidents.permissions import IsActiveSuperuser
+from incidents.services.report_status import update_report_status
 from incidents.serializers import (
     IncidentSerializer,
     IncidentStatusUpdateSerializer,
@@ -240,8 +242,10 @@ class IncidentListView(generics.ListAPIView):
             )
 
         if search:
+            code = re.fullmatch(r"(SC|GP)-(\d{1,19})", search, re.I)
+            code_query = Q(pk=int(code[2]), code_prefix=code[1].upper()) if code else Q(pk__in=[])
             queryset = queryset.filter(
-                Q(area__icontains=search)
+                code_query | Q(area__icontains=search)
                 | Q(location_context__icontains=search)
                 | Q(unit__icontains=search)
                 | Q(equipment__icontains=search)
@@ -254,6 +258,12 @@ class IncidentListView(generics.ListAPIView):
                 )
             )
 
+        for key in ("branch", "report_type", "request_category"):
+            value = self.request.query_params.get(key)
+            if value:
+                if key in ("branch", "request_category") and not value.isdecimal():
+                    return queryset.none()
+                queryset = queryset.filter(**{key: value})
         ordering_field = ordering.lstrip("-")
 
         if ordering_field not in self.ALLOWED_ORDERING_FIELDS:
@@ -644,23 +654,7 @@ class IncidentDetailView(generics.RetrieveAPIView):
         )
         serializer.is_valid(raise_exception=True)
 
-        new_status = serializer.validated_data["status"]
-
-        incident.status = new_status
-
-        if new_status == Incident.Status.RESOLVED:
-            if incident.resolved_at is None:
-                incident.resolved_at = timezone.now()
-        else:
-            incident.resolved_at = None
-
-        incident.save(
-            update_fields=[
-                "status",
-                "resolved_at",
-                "updated_at",
-            ]
-        )
+        incident = update_report_status(incident.pk, serializer.validated_data["status"])
 
         response_serializer = IncidentSerializer(
             incident,

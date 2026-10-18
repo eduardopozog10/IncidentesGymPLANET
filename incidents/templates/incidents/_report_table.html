@@ -1,0 +1,44 @@
+<div class="table-scroll">
+<table>
+<caption class="sr-only">{{ page_title }}: resultados filtrados</caption>
+<thead>
+<tr>
+<th scope="col">Reporte</th>
+<th scope="col">Sucursal / área</th>{% if report_type == 'request' %}<th scope="col">Tipo / categoría</th>
+<th scope="col">Justificación</th>{% else %}<th scope="col">Equipo / instalación</th>
+<th scope="col">Falla o síntoma</th>{% endif %}<th scope="col">Prioridad</th>
+<th scope="col">Estado</th>
+<th scope="col">Fecha</th>
+</tr>
+</thead>
+<tbody>{% for report in reports %}<tr>
+<td>
+<a class="report-code" href="{% url 'report-detail' report.pk %}">{{ report.code }} <span aria-hidden="true">↗</span>
+</a>
+<p class="cell-description">{{ report.description|truncatechars:85 }}</p>{% if not report_type %}<span class="type-label">{{ report.get_report_type_display }}</span>{% endif %}</td>
+<td>
+<strong>{{ report.branch.name|default:'Sin sucursal histórica' }}</strong>
+<small>{{ report.branch_area.name|default:report.area|default:report.location_context|default:'Sin área informada' }}</small>
+</td>{% if report_type == 'request' %}<td>{{ report.request_kind|default:'Sin tipo informado' }}<small>{{ report.request_category.name|default:'Sin categoría registrada' }}</small>
+</td>
+<td class="cell-description">{{ report.operational_impact|truncatechars:90 }}</td>{% else %}<td>{% if report.report_type == 'request' %}Solicitud operativa{% else %}{{ report.equipment }}{% endif %}</td>
+<td>{% if report.report_type == 'request' %}{{ report.request_kind|default:'Solicitud operativa' }}{% else %}{{ report.failure_type }}{% endif %}</td>{% endif %}<td>
+<span class="badge priority-{{ report.priority }}">{{ report.get_priority_display }}</span>
+</td>
+<td>
+<span class="badge status-{{ report.status }}">{{ report.get_status_display }}</span>
+</td>
+<td class="date-cell">{{ report.created_at|date:'d M Y' }}<small>{{ report.created_at|date:'H:i' }}</small>
+</td>
+</tr>{% empty %}<tr>
+<td colspan="7">
+<div class="empty-state">
+<span aria-hidden="true">◇</span>
+<h3>No hay reportes en esta vista</h3>
+<p>Prueba otro rango de fechas o ajusta los filtros.</p>
+<a href="{{ request.path }}">Ver sin filtros →</a>
+</div>
+</td>
+</tr>{% endfor %}</tbody>
+</table>
+</div>

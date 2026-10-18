@@ -1,0 +1,110 @@
+{% load static %}<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<title>{{ page_title }} · Gym Planet</title>
+<link rel="stylesheet" href="{% static 'incidents/dashboard.css' %}">
+</head>
+<body>
+<a class="skip-link" href="#main">Saltar al contenido</a>
+<svg class="symbols" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+<symbol id="grid" viewBox="0 0 24 24">
+<rect x="3" y="3" width="7" height="7" rx="2"/>
+<rect x="14" y="3" width="7" height="7" rx="2"/>
+<rect x="3" y="14" width="7" height="7" rx="2"/>
+<rect x="14" y="14" width="7" height="7" rx="2"/>
+</symbol>
+<symbol id="bolt" viewBox="0 0 24 24">
+<path d="m13 2-9 12h7l-1 8 10-13h-8z"/>
+</symbol>
+<symbol id="list" viewBox="0 0 24 24">
+<rect x="5" y="3" width="14" height="18" rx="3"/>
+<path d="M9 8h6M9 12h6M9 16h4"/>
+</symbol>
+<symbol id="pin" viewBox="0 0 24 24">
+<path d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 1 1 16 0Z"/>
+<circle cx="12" cy="10" r="3"/>
+</symbol>
+<symbol id="asset" viewBox="0 0 24 24">
+<path d="M3 8v8m4-11v14m0-7h10m0-7v14m4-11v8"/>
+</symbol>
+<symbol id="arrow" viewBox="0 0 24 24">
+<path d="M5 12h14m-6-6 6 6-6 6"/>
+</symbol>
+</svg>
+<div class="app-shell">
+<aside class="sidebar" aria-label="Navegación principal">
+<a class="brand" href="{% url 'dashboard' %}" aria-label="Gym Planet, inicio">
+<span class="brand-mark">gp<span>•</span>
+</span>
+<span>GYM <b>PLANET</b>
+<small>OPERACIONES · CHILE</small>
+</span>
+</a>
+<p class="nav-label">ESPACIO DE TRABAJO</p>
+<nav>
+<a href="{% url 'dashboard' %}" {% if section == 'overview' %}aria-current="page"{% endif %}>
+<svg aria-hidden="true">
+<use href="#grid"/>
+</svg>Centro de control</a>
+<a href="{% url 'dashboard-incidents' %}" {% if section == 'incidents' %}aria-current="page"{% endif %}>
+<svg aria-hidden="true">
+<use href="#bolt"/>
+</svg>Incidencias</a>
+<a href="{% url 'dashboard-requests' %}" {% if section == 'requests' %}aria-current="page"{% endif %}>
+<svg aria-hidden="true">
+<use href="#list"/>
+</svg>Solicitudes</a>
+<a href="{% url 'dashboard-reports' %}" {% if section == 'reports' %}aria-current="page"{% endif %}>
+<svg aria-hidden="true">
+<use href="#list"/>
+</svg>Todos los reportes</a>
+<span class="nav-label">RED DE GIMNASIOS</span>
+<a href="{% url 'dashboard-branches' %}" {% if section == 'branches' %}aria-current="page"{% endif %}>
+<svg aria-hidden="true">
+<use href="#pin"/>
+</svg>Sucursales</a>
+<a href="{% url 'dashboard-assets' %}" {% if section == 'assets' %}aria-current="page"{% endif %}>
+<svg aria-hidden="true">
+<use href="#asset"/>
+</svg>Equipos y activos</a>
+</nav>
+<div class="sidebar-bottom">
+<div class="workspace-note">
+<span class="status-dot">
+</span>Gestión multisucursal<small>Una red. Una visión operativa.</small>
+</div>
+<a href="{% url 'admin:index' %}">Administración Django <span aria-hidden="true">↗</span>
+</a>
+</div>
+</aside>
+<div class="workspace">
+<header class="topbar">
+<span>Operaciones <span class="slash">/</span> <strong>{{ page_title }}</strong>
+</span>
+<div class="profile">
+<span class="restricted">Acceso autorizado</span>
+<span class="avatar" aria-hidden="true">{{ request.user.username|slice:':2'|upper }}</span>
+<span>{{ request.user.get_short_name|default:request.user.username }}</span>
+</div>
+</header>
+<main id="main" tabindex="-1">
+<div class="page-heading">
+<div>
+<p class="eyebrow">GYM PLANET · GESTIÓN OPERATIVA</p>
+<h1>{{ page_title }}</h1>
+<p class="lede">{% block subtitle %}Todo lo que necesita tu red, en un solo lugar.{% endblock %}</p>
+</div>{% block heading_action %}<a class="button primary" href="{% url 'dashboard-reports' %}">Explorar reportes <span aria-hidden="true">↗</span>
+</a>{% endblock %}</div>
+{% for message in messages %}<p class="notice" role="status">{{ message }}</p>{% endfor %}
+{% block content %}{% endblock %}<footer class="page-footer">
+<span>Gym Planet <span aria-hidden="true">·</span> Plataforma de operaciones</span>
+<span>Información real. Decisiones informadas.</span>
+</footer>
+</main>
+</div>
+</div>
+</body>
+</html>

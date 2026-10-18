@@ -68,6 +68,14 @@ def request_kind(text):
     return None
 
 
+def explicit_operational_impact(text):
+    normalized = normalize(text)
+    if re.search(r"\b(no|nunca) (?:esta|quedo|se encuentra) fuera de servicio\b", normalized):
+        return None
+    match = re.search(r"\b(fuera de servicio|no se puede (?:utilizar|usar)|no puede (?:utilizarse|usarse)|no permite entrenar|no esta disponible)\b", normalized)
+    return match.group(0).capitalize() if match else None
+
+
 class GymPlanetContext:
     def __init__(self, text, draft=None, *, branch=None):
         self.text = text
@@ -100,6 +108,7 @@ class GymPlanetContext:
         return "¿A qué sucursal corresponde? Indica nombre o código: " + ", ".join(f"{b.name} ({b.code})" for b in self.active)
 
     def enrich(self, data, processor, draft=None):
+        data["operational_impact"] = data.get("operational_impact") or explicit_operational_impact(self.parse_text)
         gym_areas = {"musculacion", "cardio", "peso libre", "camarines", "recepcion", "salas de clases"}
         if not data.get("location_context") and normalize(data.get("area")) in gym_areas:
             data["location_context"] = data["area"]
@@ -195,6 +204,7 @@ def finish(message, *, reply, action="ask_clarification", draft=None, data=None,
 
 def process_request(processor, message, draft, context, initial_extraction=None):
     previous = dict(draft.extracted_data or {}) if draft else {}
+    previous["_authorized_branch"] = f"{context.branch.name} ({context.branch.code})"
     text = context.parse_text
     normalized = normalize(text)
     if draft and draft.status == IncidentDraft.Status.READY and normalized in processor.CONFIRMATION_POSITIVE:
@@ -210,7 +220,7 @@ def process_request(processor, message, draft, context, initial_extraction=None)
         previous["_request_correction"] = True
         draft.extracted_data = previous
         draft.status = IncidentDraft.Status.COLLECTING
-        draft.last_question = "¿Qué dato quieres corregir: sucursal, tipo, descripción, impacto o prioridad?"
+        draft.last_question = "¿Qué dato quieres corregir: tipo, descripción, impacto o prioridad?"
         draft.save()
         return finish(message, draft=draft, data=previous, reply=draft.last_question)
     if previous.get("_request_correction"):

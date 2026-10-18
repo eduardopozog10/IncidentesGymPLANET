@@ -405,6 +405,8 @@ class IncidentProcessor:
             if key != self.PENDING_MESSAGES_KEY
         }
 
+        previous_data["_authorized_branch"] = f"{gym_context.branch.name} ({gym_context.branch.code})"
+
         help_field = self._get_pending_help_field(draft)
 
         if (
@@ -548,10 +550,8 @@ class IncidentProcessor:
                 extraction.intent == "conversation"
                 and not correction_mode
             ):
-                reply = (
-                    extraction.conversation_reply
-                    or "De acuerdo. ¿En qué puedo ayudarte?"
-                )
+                # AI prose cannot ask for identity or expose internal priority codes.
+                reply = self.FALLBACK_QUESTIONS.get(draft.missing_fields[0], WELCOME) if draft and draft.missing_fields else WELCOME
 
                 message.status = ChannelMessage.Status.PROCESSED
                 message.processed_at = timezone.now()
@@ -763,6 +763,8 @@ class IncidentProcessor:
             clarification_question = self.GUIDED_QUESTIONS.get(help_field, clarification_question)
 
         if missing_fields:
+            if direct_draft_result is None and not equipment_was_generic and not details_were_generic:
+                clarification_question = self.FALLBACK_QUESTIONS.get(missing_fields[0], clarification_question)
             clarification_question = gym_context.question(missing_fields, clarification_question)
 
         if draft is None:
@@ -1514,89 +1516,29 @@ class IncidentProcessor:
             bool(changed_fields),
         )
 
-    def _build_confirmation_reply(
-        self,
-        extracted_data: dict,
-    ) -> str:
-        asset_category_labels = dict(
-            Incident.AssetCategory.choices
-        )
-
-        priority_labels = dict(
-            Incident.Priority.choices
-        )
-
-        area = (
-            extracted_data.get("area")
-            or "No informada"
-        )
-
-        location_context = (
-            extracted_data.get("location_context")
-            or extracted_data.get("unit")
-            or "No informada"
-        )
-
-        asset_category = asset_category_labels.get(
-            extracted_data.get("asset_category"),
-            "No informada",
-        )
-
-        equipment = (
-            extracted_data.get("equipment")
-            or "No informado"
-        )
-
-        failure_type = (
-            extracted_data.get("failure_type")
-            or "No informado"
-        )
-
-        description = (
-            extracted_data.get("description")
-            or "No informada"
-        )
-
-        operational_impact = (
-            extracted_data.get("operational_impact")
-            or "No informado"
-        )
-
-        priority = priority_labels.get(
-            extracted_data.get("priority"),
-            "No informada",
-        )
-
-        if extracted_data.get("report_type") == "request":
-            return (
-                "Antes de crear la solicitud, revisa los datos:\n\n"
-                f"• Tipo: Solicitud operativa\n• Sucursal: {extracted_data.get('branch') or 'Sin confirmar'}\n"
-                f"• Área o contexto: {extracted_data.get('area') or extracted_data.get('location_context') or 'No informado'}\n"
-                f"• Solicitud: {extracted_data.get('request_kind') or 'No informada'}\n"
-                f"• Categoría: {extracted_data.get('request_category') or 'Sin categoría registrada'}\n"
-                f"• Descripción: {description}\n• Justificación o impacto: {operational_impact}\n"
-                f"• Prioridad: {priority}\n\n"
-                "¿Confirmas la creación de la solicitud? Responde Sí para crearla o No para corregir."
-            )
-        noun = "incidente"
-        article = "la" if noun == "solicitud" else "el"
-        return (
-            f"Antes de crear {article} {noun}, revisa los datos:\n\n"
-            f"• Tipo: {'Solicitud operativa' if extracted_data.get('report_type') == 'request' else 'Incidencia'}\n"
-            f"• Sucursal: {extracted_data.get('branch') or 'Sin confirmar'}\n"
-            f"• Área: {area}\n"
-            f"• Ubicación/contexto: {location_context}\n"
-            f"• Familia: {asset_category}\n"
-            f"• Equipo/servicio: {equipment}\n"
-            f"• Solicitud: {extracted_data.get('request_kind') or 'No corresponde'}\n"
-            f"• Síntoma: {failure_type}\n"
-            f"• Descripción: {description}\n"
-            f"• Impacto operacional: {operational_impact}\n"
-            f"• Prioridad: {priority}\n\n"
-            f"¿Confirmas la creación {'de la solicitud' if noun == 'solicitud' else 'del incidente'}? "
-            "Responde Sí para crearlo o No para corregir "
-            "algún dato."
-        )
+    def _build_confirmation_reply(self, extracted_data: dict) -> str:
+        is_request = extracted_data.get("report_type") == "request"
+        title = "la solicitud" if is_request else "el incidente"
+        rows = [("Tipo", "Solicitud operativa" if is_request else "Incidencia"),
+                ("Sucursal", extracted_data.get("branch") or "Sin confirmar")]
+        area = extracted_data.get("area")
+        location = extracted_data.get("location_context") or extracted_data.get("unit")
+        if area:
+            rows.append(("Área", area))
+        if location and normalize(location) != normalize(area):
+            rows.append(("Ubicación/contexto", location))
+        if is_request:
+            rows.append(("Solicitud", extracted_data.get("request_kind")))
+            if extracted_data.get("request_category"):
+                rows.append(("Categoría", extracted_data["request_category"]))
+        else:
+            rows.extend([("Equipo/servicio", extracted_data.get("equipment")),
+                         ("Síntoma", extracted_data.get("failure_type"))])
+        rows.extend([("Descripción", extracted_data.get("description")),
+                     ("Justificación o impacto" if is_request else "Impacto operacional", extracted_data.get("operational_impact")),
+                     ("Prioridad", dict(Incident.Priority.choices).get(extracted_data.get("priority"), "Sin confirmar"))])
+        lines = "\n".join(f"• {label}: {value}" for label, value in rows if value)
+        return f"Antes de crear {title}, revisa los datos:\n\n{lines}\n\n¿Confirmas la creación {'de la solicitud' if is_request else 'del incidente'}? Responde Sí para guardar o No para corregir."
 
     def _create_incident_from_draft(
         self,

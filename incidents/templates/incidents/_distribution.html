@@ -1,0 +1,10 @@
+<ul class="distribution">{% for row in rows %}<li>
+<div>
+<span>{{ row.label }}</span>
+<strong>{{ row.count }}</strong>
+</div>
+<div class="bar-track" aria-hidden="true">
+<span style="width:{{ row.width }}%">
+</span>
+</div>
+</li>{% empty %}<li class="empty-inline">Sin reportes para esta selección.</li>{% endfor %}</ul>

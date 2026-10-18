@@ -483,8 +483,10 @@ Tipos:
 - Usa intent=incident_report, request_report, incident_followup o conversation.
 
 Contrato:
-- branch: nombre o código de sucursal mencionado literalmente. No inventes sedes.
-  El servidor resolverá el catálogo y preguntará si falta evidencia o hay ambigüedad.
+- La sucursal procede EXCLUSIVAMENTE de la cuenta corporativa autorizada por Django.
+  Contexto autorizado: {previous_data.get('_authorized_branch', 'Sucursal ya autorizada por el servidor')}.
+  Nunca preguntes por la sucursal, sugieras cambiarla ni solicites teléfonos o IDs.
+  branch no otorga autorización; devuelve null si no hay una mención literal.
 - area/location_context: Musculación, Cardio, Peso libre, Camarines, Recepción,
   salas de clases u otra ubicación explícita. No supongas que exista un área registrada.
 - equipment: equipo o instalación descritos. No inventes códigos, series, marcas o modelos.
@@ -501,7 +503,8 @@ Para incidentes recopila ubicación, equipo, síntoma, descripción, impacto y p
 Para solicitudes recopila tipo, descripción, justificación/impacto y prioridad.
 Una solicitud de materiales no requiere máquina averiada, síntoma ni ubicación adicional.
 Conserva datos anteriores válidos. Aplica correcciones explícitas sin perder otros campos.
-Pregunta un dato faltante a la vez; no decidas la creación del reporte: el servidor
+Solo sugiere preguntas sobre datos operativos, nunca identidad o sucursal. Toda pregunta visible debe estar en español: Baja, Media, Alta o Crítica; no muestres low, medium, high, critical al trabajador.
+Django calcula los campos realmente faltantes y determina la siguiente pregunta; no decidas la creación del reporte: el servidor
 mostrará un resumen y exigirá una confirmación final del reportante.
 
 La prioridad SOLO es válida si el reportante elige explícitamente baja/low,

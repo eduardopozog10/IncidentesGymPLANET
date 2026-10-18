@@ -2502,11 +2502,11 @@ class IncidentDetailViewTests(TestCase):
     def test_incident_code_uses_secuoya_prefix(self):
         self.assertEqual(
             self.incident.code,
-            f"SC-{self.incident.pk:06d}",
+            f"GP-{self.incident.pk:06d}",
         )
 
         self.assertTrue(
-            self.incident.code.startswith("SC-"),
+            self.incident.code.startswith("GP-"),
         )
 
         self.assertFalse(
@@ -2517,7 +2517,7 @@ class IncidentDetailViewTests(TestCase):
 
         self.assertEqual(
             pending_incident.code,
-            "SC-PENDIENTE",
+            "GP-PENDIENTE",
         )
 
     def test_retrieves_incident_detail(self):
