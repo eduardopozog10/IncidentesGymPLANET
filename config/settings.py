@@ -206,3 +206,8 @@ INCIDENT_NOTIFICATION_EMAIL = env(
     "INCIDENT_NOTIFICATION_EMAIL",
     default="",
 )
+
+# Transport entry points are closed by default. Polling needs no HTTP webhook.
+TELEGRAM_WEBHOOK_ENABLED = env.bool("TELEGRAM_WEBHOOK_ENABLED", default=False)
+TELEGRAM_WEBHOOK_SECRET = env("TELEGRAM_WEBHOOK_SECRET", default="")
+ENABLE_TEST_MESSAGE_ENDPOINT = DEBUG and env.bool("ENABLE_TEST_MESSAGE_ENDPOINT", default=False)

@@ -17,8 +17,26 @@ from .models import (
 )
 
 
+class SecureModelAdmin(admin.ModelAdmin):
+    """Until branch-scoped supervision exists, operational access is superuser-only."""
+    def has_module_permission(self, request):
+        return request.user.is_active and request.user.is_superuser
+
+    def has_view_permission(self, request, obj=None):
+        return self.has_module_permission(request)
+
+    def has_add_permission(self, request):
+        return self.has_module_permission(request)
+
+    def has_change_permission(self, request, obj=None):
+        return self.has_module_permission(request)
+
+    def has_delete_permission(self, request, obj=None):
+        return self.has_module_permission(request)
+
+
 @admin.register(Branch)
-class BranchAdmin(admin.ModelAdmin):
+class BranchAdmin(SecureModelAdmin):
     list_display = ("name", "code", "is_active", "created_at")
     list_filter = ("is_active",)
     search_fields = ("name", "code")
@@ -28,7 +46,7 @@ class BranchAdmin(admin.ModelAdmin):
 
 
 @admin.register(BranchArea)
-class BranchAreaAdmin(admin.ModelAdmin):
+class BranchAreaAdmin(SecureModelAdmin):
     list_display = ("name", "code", "branch", "is_active", "created_at")
     list_filter = ("branch", "is_active")
     search_fields = ("name", "code", "branch__name", "branch__code")
@@ -37,7 +55,7 @@ class BranchAreaAdmin(admin.ModelAdmin):
     list_per_page = 25
 
 
-class CategoryAdmin(admin.ModelAdmin):
+class CategoryAdmin(SecureModelAdmin):
     list_display = ("name", "code", "is_active")
     list_filter = ("is_active",)
     search_fields = ("name", "code", "description")
@@ -72,7 +90,7 @@ class AssetMovementInline(admin.TabularInline):
 
 
 @admin.register(GymAsset)
-class GymAssetAdmin(admin.ModelAdmin):
+class GymAssetAdmin(SecureModelAdmin):
     form = GymAssetAdminForm
     list_display = ("code", "name", "branch", "branch_area", "category", "operational_status", "is_active")
     list_filter = ("branch", "branch_area", "category", "operational_status", "is_active")
@@ -83,7 +101,7 @@ class GymAssetAdmin(admin.ModelAdmin):
 
 
 @admin.register(MaintenanceRecord)
-class MaintenanceRecordAdmin(admin.ModelAdmin):
+class MaintenanceRecordAdmin(SecureModelAdmin):
     form = MaintenanceAdminForm
     list_display = ("asset", "branch", "maintenance_type", "status", "scheduled_at", "performed_at", "responsible")
     list_filter = ("branch", "maintenance_type", "status", "scheduled_at")
@@ -96,7 +114,7 @@ class MaintenanceRecordAdmin(admin.ModelAdmin):
 
 
 @admin.register(AssetMovement)
-class AssetMovementAdmin(admin.ModelAdmin):
+class AssetMovementAdmin(SecureModelAdmin):
     list_display = ("asset", "from_branch", "to_branch", "created_at")
     list_filter = ("from_branch", "to_branch")
     search_fields = ("asset__code", "asset__name", "from_code", "to_code")
@@ -114,9 +132,22 @@ class AssetMovementAdmin(admin.ModelAdmin):
 
 
 class TechnicianChannelInline(admin.TabularInline):
+    def has_view_permission(self, request, obj=None):
+        return request.user.is_active and request.user.is_superuser
+
+    def has_add_permission(self, request, obj=None):
+        return self.has_view_permission(request, obj)
+
+    def has_change_permission(self, request, obj=None):
+        return self.has_view_permission(request, obj)
+
+    def has_delete_permission(self, request, obj=None):
+        return self.has_view_permission(request, obj)
+
     model = TechnicianChannel
     extra = 0
     fields = (
+        "branch",
         "provider",
         "external_user_id",
         "external_chat_id",
@@ -126,7 +157,7 @@ class TechnicianChannelInline(admin.TabularInline):
 
 
 @admin.register(Technician)
-class TechnicianAdmin(admin.ModelAdmin):
+class TechnicianAdmin(SecureModelAdmin):
     list_display = (
         "full_name",
         "whatsapp_number",
@@ -151,9 +182,10 @@ class TechnicianAdmin(admin.ModelAdmin):
 
 
 @admin.register(TechnicianChannel)
-class TechnicianChannelAdmin(admin.ModelAdmin):
+class TechnicianChannelAdmin(SecureModelAdmin):
     list_display = (
         "technician",
+        "branch",
         "provider",
         "external_user_id",
         "external_chat_id",
@@ -161,6 +193,7 @@ class TechnicianChannelAdmin(admin.ModelAdmin):
         "is_active",
     )
     list_filter = (
+        "branch",
         "provider",
         "is_active",
     )
@@ -174,16 +207,17 @@ class TechnicianChannelAdmin(admin.ModelAdmin):
         "created_at",
         "updated_at",
     )
-    list_select_related = ("technician",)
+    list_select_related = ("technician", "branch")
     ordering = (
         "technician__full_name",
+        "branch",
         "provider",
     )
     list_per_page = 25
 
 
 @admin.register(Incident)
-class IncidentAdmin(admin.ModelAdmin):
+class IncidentAdmin(SecureModelAdmin):
     form = IncidentAdminForm
     list_display = (
         "incident_code",
@@ -289,7 +323,16 @@ class IncidentAdmin(admin.ModelAdmin):
 
 
 @admin.register(ChannelMessage)
-class ChannelMessageAdmin(admin.ModelAdmin):
+class ChannelMessageAdmin(SecureModelAdmin):
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
     list_display = (
         "created_at",
         "provider",
@@ -329,8 +372,18 @@ class ChannelMessageAdmin(admin.ModelAdmin):
 
 
 @admin.register(IncidentDraft)
-class IncidentDraftAdmin(admin.ModelAdmin):
+class IncidentDraftAdmin(SecureModelAdmin):
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
     list_display = (
+        "channel_account",
         "technician",
         "status",
         "incident",
@@ -352,6 +405,7 @@ class IncidentDraftAdmin(admin.ModelAdmin):
         "completed_at",
     )
     list_select_related = (
+        "channel_account",
         "technician",
         "incident",
     )

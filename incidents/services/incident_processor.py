@@ -17,6 +17,7 @@ from incidents.models import (
     Technician,
 )
 from incidents.services.gymplanet_conversation import GymPlanetContext, WELCOME, finish, normalize, process_request
+from incidents.services.corporate_identity import authorized_branch
 from incidents.services.incident_draft_service import IncidentDraftService
 from incidents.services.incident_notification_service import (
     send_incident_created_email,
@@ -281,20 +282,36 @@ class IncidentProcessor:
     def process(self, message: ChannelMessage):
         if message.technician_id is None:
             raise ValueError("El mensaje debe estar asociado a un reportante.")
-        # Serialize drafts per reporter, including concurrent messages from different channels.
+        branch = authorized_branch(message)
+        if branch is None:
+            return finish(message, action="unauthorized_account", reply="La cuenta no tiene una sucursal activa autorizada. Contacta al administrador.")
+        # Serialize messages while retaining independent drafts per corporate account.
         Technician.objects.select_for_update().get(pk=message.technician_id)
         draft = IncidentDraft.objects.select_for_update().filter(
             technician=message.technician,
+            channel_account_id=message.channel_account_id,
             status__in=[IncidentDraft.Status.COLLECTING, IncidentDraft.Status.READY],
         ).order_by("-updated_at").first()
         command = message.content.strip().split("@", 1)[0].lower()
         if command == "/start":
             return finish(message, action="welcome_sent", draft=draft, reply=WELCOME)
         if command == "/cancelar":
-            cancelled = self.draft_service.cancel_active_draft(technician=message.technician)
+            cancelled = self.draft_service.cancel_active_draft(technician=message.technician, channel_account=message.channel_account)
             return finish(message, action="draft_cancelled" if cancelled else "no_active_draft", draft=cancelled,
                           reply="El reporte pendiente fue cancelado." if cancelled else "No tienes ningún reporte pendiente.")
-        context = GymPlanetContext(message.content, draft)
+        context = GymPlanetContext(message.content, draft, branch=branch)
+        if context.branch_issue or (draft and draft.extracted_data.get("_branch_conflict") and not context.authorized_mention):
+            if draft:
+                draft.extracted_data["_branch_conflict"] = True
+                draft.status = IncidentDraft.Status.COLLECTING
+                draft.save(update_fields=["extracted_data", "status", "updated_at"])
+            return finish(message, action="branch_mismatch", draft=draft, reply=context.branch_issue or "Confirma el nombre o código de la sucursal autorizada de esta cuenta para resolver la discrepancia.")
+        if draft and context.authorized_mention and draft.extracted_data.get("_branch_conflict"):
+            draft.extracted_data.pop("_branch_conflict")
+            draft.save(update_fields=["extracted_data", "updated_at"])
+        if draft and draft.extracted_data.get("branch_id") != branch.pk:
+            return finish(message, action="branch_mismatch", draft=draft,
+                          reply="La asociación de la cuenta cambió. El borrador conserva su sucursal original; cancélalo antes de iniciar otro.")
         quick = self._get_quick_conversation_reply(context.parse_text)
         if quick is not None:
             return finish(message, action="conversation", draft=draft, reply=quick)
@@ -327,6 +344,7 @@ class IncidentProcessor:
         draft = (
             IncidentDraft.objects.filter(
                 technician=message.technician,
+                channel_account_id=message.channel_account_id,
                 status__in=[
                     IncidentDraft.Status.COLLECTING,
                     IncidentDraft.Status.READY,
@@ -749,6 +767,7 @@ class IncidentProcessor:
 
         if draft is None:
             draft = IncidentDraft.objects.create(
+                channel_account=message.channel_account,
                 technician=message.technician,
                 initial_message=message,
                 extracted_data=extracted_data,
@@ -1591,7 +1610,10 @@ class IncidentProcessor:
             ).items()
             if key != self.PENDING_MESSAGES_KEY
         }
-        context = GymPlanetContext("", draft)
+        branch = authorized_branch(message)
+        if branch is None or draft.channel_account_id != message.channel_account_id or draft.technician_id != message.technician_id or draft.extracted_data.get("branch_id") != branch.pk or draft.extracted_data.get("_branch_conflict"):
+            return finish(message, action="unauthorized_account", draft=draft, reply="La cuenta o su sucursal ya no están autorizadas. No se creó el reporte.")
+        context = GymPlanetContext("", draft, branch=branch)
         checked = context.enrich(dict(extracted_data), self, draft)
         required = ("request_kind", "description", "operational_impact", "priority") if context.kind == "request" else self.REQUIRED_FIELDS
         missing = context.missing(checked, required)
@@ -1775,9 +1797,10 @@ class IncidentProcessor:
     ):
         if draft is None:
             original = ChannelMessage.objects.values_list("content", flat=True).get(pk=message.pk)
-            context = GymPlanetContext(original)
+            context = GymPlanetContext(original, branch=authorized_branch(message))
             previous_data = context.enrich(dict(previous_data), self)
             draft = IncidentDraft.objects.create(
+                channel_account=message.channel_account,
                 technician=message.technician, initial_message=message,
                 extracted_data=previous_data, status=IncidentDraft.Status.COLLECTING,
             )

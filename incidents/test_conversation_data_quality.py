@@ -1,3 +1,4 @@
+from incidents.models import Branch
 from incidents.conversation_test_support import LegacyBranchFixture, with_test_branch, legacy_draft_data
 
 
@@ -37,6 +38,7 @@ class ConversationDataQualityTests(LegacyBranchFixture, TestCase):
         )
 
         TechnicianChannel.objects.create(
+            branch=Branch.objects.get(code="TEST-LEGACY"),
             technician=self.reporter,
             provider=TechnicianChannel.Provider.TELEGRAM,
             external_user_id="conversation-qa",
@@ -50,6 +52,7 @@ class ConversationDataQualityTests(LegacyBranchFixture, TestCase):
         self.message_number += 1
 
         return service.process_text(
+            verified_transport=True,
             provider="telegram",
             external_user_id="conversation-qa",
             external_chat_id="conversation-qa",
@@ -116,6 +119,7 @@ class ConversationDataQualityTests(LegacyBranchFixture, TestCase):
 
     def test_refined_ai_values_replace_less_precise_previous_values(self):
         IncidentDraft.objects.create(
+            channel_account=TechnicianChannel.objects.filter(technician=self.reporter).first(),
             technician=self.reporter,
             status=IncidentDraft.Status.COLLECTING,
             last_question="¿Puedes dar más detalles del reporte?",
@@ -190,6 +194,7 @@ class ConversationDataQualityTests(LegacyBranchFixture, TestCase):
 
     def test_natural_negative_confirmation_enters_correction_mode(self):
         draft = IncidentDraft.objects.create(
+            channel_account=TechnicianChannel.objects.filter(technician=self.reporter).first(),
             technician=self.reporter,
             status=IncidentDraft.Status.READY,
             extracted_data=legacy_draft_data({
@@ -259,6 +264,7 @@ class ConversationDataQualityTests(LegacyBranchFixture, TestCase):
 
     def test_natural_location_correction_updates_location(self):
         draft = IncidentDraft.objects.create(
+            channel_account=TechnicianChannel.objects.filter(technician=self.reporter).first(),
             technician=self.reporter,
             status=IncidentDraft.Status.READY,
             extracted_data=legacy_draft_data({
@@ -359,6 +365,7 @@ class ConversationDataQualityTests(LegacyBranchFixture, TestCase):
         )
     def test_area_correction_with_location_value_guides_user(self):
         draft = IncidentDraft.objects.create(
+            channel_account=TechnicianChannel.objects.filter(technician=self.reporter).first(),
             technician=self.reporter,
             status=IncidentDraft.Status.COLLECTING,
             extracted_data=legacy_draft_data({
@@ -437,6 +444,7 @@ class ConversationDataQualityTests(LegacyBranchFixture, TestCase):
 
     def test_selecting_equipment_correction_asks_for_new_value(self):
         draft = IncidentDraft.objects.create(
+            channel_account=TechnicianChannel.objects.filter(technician=self.reporter).first(),
             technician=self.reporter,
             status=IncidentDraft.Status.READY,
             extracted_data=legacy_draft_data({
@@ -563,6 +571,7 @@ class ConversationDataQualityTests(LegacyBranchFixture, TestCase):
 
     def test_natural_equipment_correction_uses_ai_context(self):
         draft = IncidentDraft.objects.create(
+            channel_account=TechnicianChannel.objects.filter(technician=self.reporter).first(),
             technician=self.reporter,
             status=IncidentDraft.Status.READY,
             extracted_data=legacy_draft_data({
@@ -703,6 +712,7 @@ class ConversationDataQualityTests(LegacyBranchFixture, TestCase):
 
     def test_natural_equipment_reply_is_cleaned(self):
         IncidentDraft.objects.create(
+            channel_account=TechnicianChannel.objects.filter(technician=self.reporter).first(),
             technician=self.reporter,
             status=IncidentDraft.Status.COLLECTING,
             extracted_data=legacy_draft_data({
@@ -762,6 +772,7 @@ class ConversationDataQualityTests(LegacyBranchFixture, TestCase):
         )
     def test_audio_equipment_corrects_wrong_asset_category(self):
         IncidentDraft.objects.create(
+            channel_account=TechnicianChannel.objects.filter(technician=self.reporter).first(),
             technician=self.reporter,
             status=IncidentDraft.Status.COLLECTING,
             extracted_data=legacy_draft_data({
@@ -908,6 +919,7 @@ class ConversationDataQualityTests(LegacyBranchFixture, TestCase):
                 IncidentDraft.objects.all().delete()
 
                 IncidentDraft.objects.create(
+                    channel_account=TechnicianChannel.objects.filter(technician=self.reporter).first(),
                     technician=self.reporter,
                     status=IncidentDraft.Status.COLLECTING,
                     extracted_data=legacy_draft_data({
@@ -984,6 +996,7 @@ class ConversationDataQualityTests(LegacyBranchFixture, TestCase):
                 IncidentDraft.objects.all().delete()
 
                 IncidentDraft.objects.create(
+                    channel_account=TechnicianChannel.objects.filter(technician=self.reporter).first(),
                     technician=self.reporter,
                     status=IncidentDraft.Status.COLLECTING,
                     extracted_data=legacy_draft_data({

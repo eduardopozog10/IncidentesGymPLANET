@@ -1,3 +1,4 @@
+from incidents.models import Branch
 from incidents.conversation_test_support import LegacyBranchFixture, with_test_branch, legacy_draft_data
 
 from django.test import TestCase
@@ -38,6 +39,7 @@ class GuidedClarificationTests(LegacyBranchFixture, TestCase):
         )
 
         TechnicianChannel.objects.create(
+            branch=Branch.objects.get(code="TEST-LEGACY"),
             technician=self.reporter,
             provider="telegram",
             external_user_id="guided-test-user",
@@ -67,6 +69,7 @@ class GuidedClarificationTests(LegacyBranchFixture, TestCase):
         missing_fields,
     ):
         return IncidentDraft.objects.create(
+            channel_account=TechnicianChannel.objects.filter(technician=self.reporter).first(),
             technician=self.reporter,
             status=IncidentDraft.Status.COLLECTING,
             last_question=question,
@@ -82,6 +85,7 @@ class GuidedClarificationTests(LegacyBranchFixture, TestCase):
         self.message_number += 1
 
         return service.process_text(
+            verified_transport=True,
             provider="telegram",
             external_user_id="guided-test-user",
             external_chat_id="guided-test-chat",

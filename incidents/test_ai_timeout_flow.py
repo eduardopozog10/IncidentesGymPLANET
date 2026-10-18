@@ -1,3 +1,4 @@
+from incidents.models import Branch
 from incidents.conversation_test_support import LegacyBranchFixture, with_test_branch, legacy_draft_data
 
 from django.test import TestCase
@@ -67,6 +68,7 @@ class AITimeoutFlowTests(LegacyBranchFixture, TestCase):
         )
 
         TechnicianChannel.objects.create(
+            branch=Branch.objects.get(code="TEST-LEGACY"),
             technician=self.technician,
             provider=TechnicianChannel.Provider.TELEGRAM,
             external_user_id="timeout-test-user",
@@ -89,6 +91,7 @@ class AITimeoutFlowTests(LegacyBranchFixture, TestCase):
         )
 
         first_result = self.service.process_text(
+            verified_transport=True,
             provider="telegram",
             external_user_id="timeout-test-user",
             external_chat_id="timeout-test-chat",
@@ -134,6 +137,7 @@ class AITimeoutFlowTests(LegacyBranchFixture, TestCase):
         )
 
         second_result = self.service.process_text(
+            verified_transport=True,
             provider="telegram",
             external_user_id="timeout-test-user",
             external_chat_id="timeout-test-chat",
@@ -181,6 +185,7 @@ class AITimeoutFlowTests(LegacyBranchFixture, TestCase):
         )
 
         third_result = self.service.process_text(
+            verified_transport=True,
             provider="telegram",
             external_user_id="timeout-test-user",
             external_chat_id="timeout-test-chat",
@@ -225,6 +230,7 @@ class AITimeoutFlowTests(LegacyBranchFixture, TestCase):
         )
 
         fourth_result = self.service.process_text(
+            verified_transport=True,
             provider="telegram",
             external_user_id="timeout-test-user",
             external_chat_id="timeout-test-chat",

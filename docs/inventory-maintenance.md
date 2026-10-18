@@ -103,8 +103,10 @@ que un traslado concurrente deje una asociación nueva incoherente.
 Las migraciones 0001–0012 permanecen intactas. Las nuevas se validaron primero en
 `test_incidentes_gymplanet_db` y se aplicaron posteriormente en la principal con
 autorización explícita. La adaptación posterior del asistente se documenta en
-[gymplanet-conversation.md](gymplanet-conversation.md); su migración 0015 sigue
-pendiente de revisión y autorización para la base principal.
+[gymplanet-conversation.md](gymplanet-conversation.md); su migración 0015 ya está
+aplicada con autorización. La principal conserva 33 migraciones y 22 tablas. Las
+nuevas 0016/0017 de [cuentas corporativas](corporate-accounts-security.md) están
+solo en pruebas y requieren revisión antes de aplicarse a la principal.
 
 Validaciones ejecutadas desde el entorno exclusivo del proyecto:
 

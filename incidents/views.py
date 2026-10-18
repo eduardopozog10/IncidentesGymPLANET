@@ -1,5 +1,8 @@
+import secrets
 import unicodedata
 from datetime import timedelta
+
+from django.conf import settings
 
 from django.db.models import (
     Avg,
@@ -21,14 +24,10 @@ from incidents.messaging.telegram_update_handler import (
     TelegramUpdateHandler,
 )
 from incidents.models import Incident
+from incidents.permissions import IsActiveSuperuser
 from incidents.serializers import (
     IncidentSerializer,
     IncidentStatusUpdateSerializer,
-    IncomingTextMessageSerializer,
-)
-from incidents.services.incoming_message_service import (
-    ChannelNotAuthorizedError,
-    IncomingMessageService,
 )
 
 
@@ -147,7 +146,7 @@ def build_normalized_area_data(queryset):
 
 
 class IncidentListView(generics.ListAPIView):
-    permission_classes = [AllowAny]
+    permission_classes = [IsActiveSuperuser]
     serializer_class = IncidentSerializer
 
     ALLOWED_ORDERING_FIELDS = {
@@ -264,7 +263,7 @@ class IncidentListView(generics.ListAPIView):
 
 
 class IncidentSummaryView(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = [IsActiveSuperuser]
 
     def get(self, request):
         queryset = Incident.objects.all()
@@ -365,7 +364,7 @@ class IncidentSummaryView(APIView):
 
 
 class IncidentAnalyticsView(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = [IsActiveSuperuser]
 
     def get(self, request):
         queryset = Incident.objects.all()
@@ -629,7 +628,7 @@ class IncidentAnalyticsView(APIView):
 
 
 class IncidentDetailView(generics.RetrieveAPIView):
-    permission_classes = [AllowAny]
+    permission_classes = [IsActiveSuperuser]
     serializer_class = IncidentSerializer
 
     def get_queryset(self):
@@ -674,98 +673,30 @@ class IncidentDetailView(generics.RetrieveAPIView):
 
 
 class IncomingTextMessageTestView(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = [IsActiveSuperuser]
 
     def post(self, request):
-        serializer = IncomingTextMessageSerializer(
-            data=request.data,
-        )
-        serializer.is_valid(raise_exception=True)
-
-        validated_data = serializer.validated_data
-
-        try:
-            result = IncomingMessageService().process_text(
-                provider=validated_data["provider"],
-                external_user_id=validated_data[
-                    "external_user_id"
-                ],
-                external_chat_id=validated_data[
-                    "external_chat_id"
-                ],
-                external_message_id=validated_data[
-                    "external_message_id"
-                ],
-                text=validated_data["text"],
-                raw_payload=request.data,
-            )
-        except ChannelNotAuthorizedError as error:
-            return Response(
-                {
-                    "detail": str(error),
-                },
-                status=status.HTTP_404_NOT_FOUND,
-            )
-        except Exception as error:
-            return Response(
-                {
-                    "detail": (
-                        "No fue posible procesar el mensaje."
-                    ),
-                    "error": str(error),
-                },
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            )
-
-        message = result["message"]
-
-        if result["duplicate"]:
-            return Response(
-                {
-                    "message": (
-                        "El mensaje ya había sido recibido."
-                    ),
-                    "duplicate": True,
-                    "message_id": message.pk,
-                },
-                status=status.HTTP_200_OK,
-            )
-
+        # HTTP client IDs cannot authenticate a Telegram/WhatsApp sender.
+        if not settings.DEBUG or not settings.ENABLE_TEST_MESSAGE_ENDPOINT:
+            return Response(status=status.HTTP_404_NOT_FOUND)
         return Response(
-            {
-                "message": "Mensaje recibido y procesado.",
-                "duplicate": False,
-                "message_id": message.pk,
-                "provider": message.provider,
-                "processing": result["processing"],
-            },
-            status=status.HTTP_201_CREATED,
+            {"detail": "La recepción exige un transporte verificado. Use el adaptador de mensajería; este endpoint no permite suplantar cuentas."},
+            status=status.HTTP_403_FORBIDDEN,
         )
 
 
 class TelegramWebhookView(APIView):
     permission_classes = [AllowAny]
+    authentication_classes = []
 
     def post(self, request):
+        if not settings.TELEGRAM_WEBHOOK_ENABLED or not settings.TELEGRAM_WEBHOOK_SECRET:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+        provided = request.headers.get("X-Telegram-Bot-Api-Secret-Token", "")
+        if not provided or not secrets.compare_digest(provided.encode("utf-8"), settings.TELEGRAM_WEBHOOK_SECRET.encode("utf-8")):
+            return Response(status=status.HTTP_403_FORBIDDEN)
         try:
-            result = TelegramUpdateHandler().handle(
-                request.data,
-            )
+            result = TelegramUpdateHandler().handle(request.data)
         except Exception:
-            return Response(
-                {
-                    "detail": (
-                        "No fue posible procesar la actualización "
-                        "de Telegram."
-                    ),
-                },
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            )
-
-        return Response(
-            {
-                "ok": True,
-                "result": result,
-            },
-            status=status.HTTP_200_OK,
-        )
+            return Response({"detail": "No fue posible procesar la actualización de Telegram."}, status=500)
+        return Response({"ok": True, "result": result})

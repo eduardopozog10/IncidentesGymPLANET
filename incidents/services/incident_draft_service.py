@@ -8,11 +8,13 @@ class IncidentDraftService:
         self,
         *,
         technician: Technician,
+        channel_account=None,
     ) -> IncidentDraft | None:
         Technician.objects.select_for_update().get(pk=technician.pk)
         draft = (
             IncidentDraft.objects.select_for_update().filter(
                 technician=technician,
+                channel_account=channel_account,
                 status__in=[
                     IncidentDraft.Status.COLLECTING,
                     IncidentDraft.Status.READY,

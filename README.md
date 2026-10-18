@@ -5,12 +5,18 @@ Sistema en desarrollo para gestionar incidencias y solicitudes operativas de las
 La base funcional de inventario, mantenimiento y solicitudes se documenta en
 [docs/inventory-maintenance.md](docs/inventory-maintenance.md), incluidas las reglas
 de historial, traslados, prioridades y validación. Las nuevas migraciones de esa
-etapa requieren revisión antes de aplicarse a la base principal.
+etapa (0013/0014) ya se aplicaron a la base principal con autorización.
 
 El [flujo conversacional Gym Planet](docs/gymplanet-conversation.md) describe
-la selección obligatoria de sucursal, incidencias y solicitudes, confirmación,
-prioridad explícita y recuperación ante errores de IA. La migración adicional
-0015 queda pendiente de revisión para la base principal.
+la sucursal derivada de la cuenta corporativa, incidencias y solicitudes,
+confirmación, prioridad explícita y recuperación ante errores de IA.
+
+La [administración de cuentas y controles de acceso](docs/corporate-accounts-security.md)
+detalla la vinculación manual en Admin y la política temporal de acceso exclusivo
+para superusuarios activos. La principal tiene 33 migraciones y 22 tablas, incluida
+0015. Las migraciones nuevas 0016/0017 están solo en pruebas y requieren revisión
+y autorización antes de utilizar este código con la principal. Validación: 265
+pruebas aprobadas; no se cargaron sucursales ni cuentas.
 
 ## Independencia de Secuoya
 
@@ -24,7 +30,7 @@ No compartir bases, roles PostgreSQL, secretos, bots ni destinatarios reales con
 
 - Python 3.13 o superior, según `pyproject.toml` y `uv.lock`.
 - `uv` y Git.
-- PostgreSQL independiente para desarrollo y pruebas; versión, instancia y puerto local pendientes de verificar.
+- PostgreSQL independiente para desarrollo y pruebas; entorno local verificado: PostgreSQL 18 en `localhost:5432`.
 
 Las dependencias declaradas son Django 5.2, Django REST Framework, django-environ, psycopg, google-genai y httpx. Las versiones resueltas están en `uv.lock`.
 
@@ -56,11 +62,11 @@ uv sync --locked
 
 Este comando prepara el entorno virtual y puede descargar dependencias; no prepara PostgreSQL. No se ejecutó durante la primera tarea.
 
-## Configuración local pendiente
+## Configuración local
 
-`.env.example` es una plantilla pública, no una configuración activa. En esta primera tarea no se crea ni modifica `.env`, ni se crean bases o roles.
+`.env.example` es una plantilla pública. El entorno local ya tiene un `.env` privado e ignorado, una base principal y otra de pruebas independientes. Esta entrega no modifica credenciales ni roles.
 
-En una etapa posterior, preparar un `.env` exclusivo de Gym Planet con secretos nuevos. Revisar también las variables del proceso: `config/settings.py` lee `.env` y las variables existentes en el entorno pueden prevalecer. Cambiar la plantilla no modifica una configuración privada existente.
+Para una instalación nueva, preparar un `.env` exclusivo de Gym Planet con secretos nuevos. Revisar también las variables del proceso: `config/settings.py` lee `.env` y las variables existentes en el entorno pueden prevalecer. Cambiar la plantilla no modifica una configuración privada existente.
 
 | Variable | Configuración inicial |
 | --- | --- |
@@ -68,7 +74,7 @@ En una etapa posterior, preparar un `.env` exclusivo de Gym Planet con secretos 
 | `POSTGRES_USER` | `incidentes_gymplanet_app` |
 | `POSTGRES_PASSWORD` | Marcador; reemplazar por un secreto nuevo en la configuración privada |
 | `POSTGRES_HOST` | `localhost`; confirmar la instancia antes de conectar |
-| `POSTGRES_PORT` | `5433`, provisional y sin verificar |
+| `POSTGRES_PORT` | `5432` en el entorno local verificado; la plantilla histórica aún contiene `5433` provisional |
 | `DJANGO_SECRET_KEY` | Marcador; generar una clave local única |
 | `AI_PROVIDER` | `mock`, sin llamadas al proveedor de IA |
 | `GEMINI_API_KEY` / `TELEGRAM_BOT_TOKEN` | Vacíos |

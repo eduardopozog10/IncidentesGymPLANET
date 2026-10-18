@@ -54,6 +54,9 @@ class TelegramUpdateHandler:
 
         external_user_id = str(sender.get("id", "")).strip()
         external_chat_id = str(chat.get("id", "")).strip()
+        # Only private messages from a user are accepted, never group/sender_chat posts.
+        if chat.get("type") != "private" or sender.get("is_bot") or telegram_message.get("sender_chat"):
+            return {"action": "ignored", "reason": "Se requiere una cuenta en un chat privado."}
         telegram_message_id = telegram_message.get("message_id")
         text = telegram_message.get("text")
 
@@ -92,6 +95,7 @@ class TelegramUpdateHandler:
                 external_message_id=external_message_id,
                 text=text,
                 raw_payload=update,
+                verified_transport=True,
             )
         except ChannelNotAuthorizedError:
             self.messaging_provider.send_text(

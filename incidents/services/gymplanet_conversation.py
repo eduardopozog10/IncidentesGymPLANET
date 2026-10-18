@@ -9,7 +9,7 @@ from incidents.models import Branch, BranchArea, ChannelMessage, GymAsset, Incid
 
 WELCOME = (
     "Hola. Soy el asistente de incidencias y solicitudes operativas de Gym Planet Chile.\n\n"
-    "Indica la sucursal y cuéntame qué ocurre o qué necesitas. Puedo registrar fallas "
+    "Tu cuenta determina la sucursal autorizada. Cuéntame qué ocurre o qué necesitas. Puedo registrar fallas "
     "en máquinas e instalaciones, o solicitudes de materiales, implementos y servicios. "
     "Te preguntaré los datos faltantes y la prioridad que tú elijas: Baja, Media, Alta o Crítica. "
     "Antes de guardar revisarás un resumen y deberás confirmarlo. Usa /cancelar para cancelar."
@@ -69,7 +69,7 @@ def request_kind(text):
 
 
 class GymPlanetContext:
-    def __init__(self, text, draft=None):
+    def __init__(self, text, draft=None, *, branch=None):
         self.text = text
         self.previous = dict(draft.extracted_data or {}) if draft else {}
         self.branch_issue = None
@@ -77,21 +77,18 @@ class GymPlanetContext:
         self.active = list(Branch.objects.filter(is_active=True).order_by("name", "code"))
         self.kind = report_type(text, self.previous.get("report_type"))
         found = matches(Branch.objects.all(), text)
-        # "Sucursal: CODE;" is an explicit selection, also convenient for API callers.
+        # An explicit branch label corroborates identity; it never authorizes it.
         selection = re.search(r"\bsucursal\s*:?\s*([^;,\n]+)[;,\n]", text, re.I)
         if selection:
             found = matches(Branch.objects.all(), selection.group(1))
-        self.branch = None
-        if len(found) == 1 and found[0].is_active:
-            self.branch = found[0]
-        elif len(found) > 1:
-            self.branch_issue = "La sucursal es ambigua. Indica un código: " + ", ".join(f"{b.name} ({b.code})" for b in found)
-        elif found:
-            self.branch_issue = "La sucursal indicada está inactiva. Selecciona una sucursal activa."
-        elif selection or re.search(r"\bsucursal\b", normalize(text)):
-            self.branch_issue = "No pude identificar esa sucursal registrada. " + self.branch_question()
-        else:
-            self.branch = next((b for b in self.active if b.pk == self.previous.get("branch_id")), None)
+        self.branch = branch
+        self.authorized_mention = bool(branch and len(found) == 1 and found[0].pk == branch.pk)
+        # Text may corroborate an association but can never grant/change it.
+        all_mentions = [item for item in Branch.objects.all() if matches([item], text)]
+        if branch is None:
+            self.branch_issue = "La cuenta no tiene una sucursal activa autorizada. Contacta al administrador."
+        elif any(item.pk != branch.pk for item in all_mentions) or (selection and (len(found) != 1 or found[0].pk != branch.pk)) or ("sucursal" in normalize(text).split() and not all_mentions):
+            self.branch_issue = "La sucursal mencionada no coincide con la sucursal autorizada de esta cuenta. No se creará el reporte."
         self.parse_text = text
         if selection:
             self.parse_text = text[:selection.start()] + text[selection.end():]
@@ -263,7 +260,7 @@ def process_request(processor, message, draft, context, initial_extraction=None)
     missing = context.missing(data, fields)
     reply = context.question(missing, questions.get(next((f for f in missing if f in questions), "priority"))) if missing else processor._build_confirmation_reply(data)
     if draft is None:
-        draft = IncidentDraft.objects.create(technician=message.technician, initial_message=message)
+        draft = IncidentDraft.objects.create(technician=message.technician, channel_account=message.channel_account, initial_message=message)
     draft.extracted_data, draft.missing_fields, draft.last_question = data, missing, reply
     draft.status = IncidentDraft.Status.COLLECTING if missing else IncidentDraft.Status.READY
     draft.save()

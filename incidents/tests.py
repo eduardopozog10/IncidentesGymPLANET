@@ -1,3 +1,5 @@
+from django.contrib.auth import get_user_model
+from incidents.models import Branch
 from incidents.conversation_test_support import LegacyBranchFixture, with_test_branch, legacy_draft_data
 
 from types import SimpleNamespace
@@ -42,6 +44,7 @@ class IncomingMessageServiceTests(LegacyBranchFixture, TestCase):
         )
 
         self.channel = TechnicianChannel.objects.create(
+            branch=Branch.objects.get(code="TEST-LEGACY"),
             technician=self.technician,
             provider=TechnicianChannel.Provider.TELEGRAM,
             external_user_id="123456789",
@@ -53,6 +56,7 @@ class IncomingMessageServiceTests(LegacyBranchFixture, TestCase):
 
     def test_creates_incident_from_complete_message_with_explicit_priority(self):
         result = self.service.process_text(
+            verified_transport=True,
             provider="telegram",
             external_user_id="123456789",
             external_chat_id="123456789",
@@ -100,6 +104,7 @@ class IncomingMessageServiceTests(LegacyBranchFixture, TestCase):
 
         # El reportante identifica la cámara específica.
         equipment_result = self.service.process_text(
+            verified_transport=True,
             provider="telegram",
             external_user_id="123456789",
             external_chat_id="123456789",
@@ -144,6 +149,7 @@ class IncomingMessageServiceTests(LegacyBranchFixture, TestCase):
         )
 
         confirmation_result = self.service.process_text(
+            verified_transport=True,
             provider="telegram",
             external_user_id="123456789",
             external_chat_id="123456789",
@@ -228,6 +234,7 @@ class IncomingMessageServiceTests(LegacyBranchFixture, TestCase):
 
     def test_requires_explicit_priority_before_creating_incident(self):
         first_result = self.service.process_text(
+            verified_transport=True,
             provider="telegram",
             external_user_id="123456789",
             external_chat_id="123456789",
@@ -263,6 +270,7 @@ class IncomingMessageServiceTests(LegacyBranchFixture, TestCase):
         )
 
         second_result = self.service.process_text(
+            verified_transport=True,
             provider="telegram",
             external_user_id="123456789",
             external_chat_id="123456789",
@@ -300,6 +308,7 @@ class IncomingMessageServiceTests(LegacyBranchFixture, TestCase):
         )
 
         third_result = self.service.process_text(
+            verified_transport=True,
             provider="telegram",
             external_user_id="123456789",
             external_chat_id="123456789",
@@ -329,6 +338,7 @@ class IncomingMessageServiceTests(LegacyBranchFixture, TestCase):
 
     def test_duplicate_message_is_not_processed_twice(self):
         first_result = self.service.process_text(
+            verified_transport=True,
             provider="telegram",
             external_user_id="123456789",
             external_chat_id="123456789",
@@ -343,6 +353,7 @@ class IncomingMessageServiceTests(LegacyBranchFixture, TestCase):
         )
 
         second_result = self.service.process_text(
+            verified_transport=True,
             provider="telegram",
             external_user_id="123456789",
             external_chat_id="123456789",
@@ -389,6 +400,7 @@ class IncomingMessageServiceTests(LegacyBranchFixture, TestCase):
         )
 
         confirmation_result = self.service.process_text(
+            verified_transport=True,
             provider="telegram",
             external_user_id="123456789",
             external_chat_id="123456789",
@@ -410,6 +422,7 @@ class IncomingMessageServiceTests(LegacyBranchFixture, TestCase):
 
     def test_creates_draft_when_information_is_missing(self):
         result = self.service.process_text(
+            verified_transport=True,
             provider="telegram",
             external_user_id="123456789",
             external_chat_id="123456789",
@@ -472,6 +485,7 @@ class IncomingMessageServiceTests(LegacyBranchFixture, TestCase):
 
     def test_completes_existing_draft_after_final_confirmation(self):
         first_result = self.service.process_text(
+            verified_transport=True,
             provider="telegram",
             external_user_id="123456789",
             external_chat_id="123456789",
@@ -485,6 +499,7 @@ class IncomingMessageServiceTests(LegacyBranchFixture, TestCase):
         draft_id = first_result["processing"]["draft_id"]
 
         second_result = self.service.process_text(
+            verified_transport=True,
             provider="telegram",
             external_user_id="123456789",
             external_chat_id="123456789",
@@ -517,6 +532,7 @@ class IncomingMessageServiceTests(LegacyBranchFixture, TestCase):
         )
 
         third_result = self.service.process_text(
+            verified_transport=True,
             provider="telegram",
             external_user_id="123456789",
             external_chat_id="123456789",
@@ -559,6 +575,7 @@ class IncomingMessageServiceTests(LegacyBranchFixture, TestCase):
         )
 
         fourth_result = self.service.process_text(
+            verified_transport=True,
             provider="telegram",
             external_user_id="123456789",
             external_chat_id="123456789",
@@ -635,6 +652,7 @@ class IncomingMessageServiceTests(LegacyBranchFixture, TestCase):
 
     def test_urgent_message_does_not_assign_priority_automatically(self):
         first_result = self.service.process_text(
+            verified_transport=True,
             provider="telegram",
             external_user_id="123456789",
             external_chat_id="123456789",
@@ -654,6 +672,7 @@ class IncomingMessageServiceTests(LegacyBranchFixture, TestCase):
         )
 
         second_result = self.service.process_text(
+            verified_transport=True,
             provider="telegram",
             external_user_id="123456789",
             external_chat_id="123456789",
@@ -687,6 +706,7 @@ class IncomingMessageServiceTests(LegacyBranchFixture, TestCase):
 
     def test_valid_operational_impact_continues_draft(self):
         first_result = self.service.process_text(
+            verified_transport=True,
             provider="telegram",
             external_user_id="123456789",
             external_chat_id="123456789",
@@ -712,6 +732,7 @@ class IncomingMessageServiceTests(LegacyBranchFixture, TestCase):
         )
 
         second_result = self.service.process_text(
+            verified_transport=True,
             provider="telegram",
             external_user_id="123456789",
             external_chat_id="123456789",
@@ -755,6 +776,7 @@ class IncomingMessageServiceTests(LegacyBranchFixture, TestCase):
 
     def test_unrelated_reply_is_not_saved_as_operational_impact(self):
         first_result = self.service.process_text(
+            verified_transport=True,
             provider="telegram",
             external_user_id="123456789",
             external_chat_id="123456789",
@@ -777,6 +799,7 @@ class IncomingMessageServiceTests(LegacyBranchFixture, TestCase):
         previous_question = draft.last_question
 
         second_result = self.service.process_text(
+            verified_transport=True,
             provider="telegram",
             external_user_id="123456789",
             external_chat_id="123456789",
@@ -817,6 +840,7 @@ class IncomingMessageServiceTests(LegacyBranchFixture, TestCase):
 
     def test_equipment_correction_updates_description(self):
         first_result = self.service.process_text(
+            verified_transport=True,
             provider="telegram",
             external_user_id="123456789",
             external_chat_id="123456789",
@@ -864,6 +888,7 @@ class IncomingMessageServiceTests(LegacyBranchFixture, TestCase):
         )
 
         self.service.process_text(
+            verified_transport=True,
             provider="telegram",
             external_user_id="123456789",
             external_chat_id="123456789",
@@ -875,6 +900,7 @@ class IncomingMessageServiceTests(LegacyBranchFixture, TestCase):
         )
 
         correction_result = self.service.process_text(
+            verified_transport=True,
             provider="telegram",
             external_user_id="123456789",
             external_chat_id="123456789",
@@ -911,6 +937,7 @@ class IncomingMessageServiceTests(LegacyBranchFixture, TestCase):
 
     def test_natural_location_correction_updates_description(self):
         first_result = self.service.process_text(
+            verified_transport=True,
             provider="telegram",
             external_user_id="123456789",
             external_chat_id="123456789",
@@ -958,6 +985,7 @@ class IncomingMessageServiceTests(LegacyBranchFixture, TestCase):
         )
 
         self.service.process_text(
+            verified_transport=True,
             provider="telegram",
             external_user_id="123456789",
             external_chat_id="123456789",
@@ -969,6 +997,7 @@ class IncomingMessageServiceTests(LegacyBranchFixture, TestCase):
         )
 
         correction_result = self.service.process_text(
+            verified_transport=True,
             provider="telegram",
             external_user_id="123456789",
             external_chat_id="123456789",
@@ -1008,6 +1037,7 @@ class IncomingMessageServiceTests(LegacyBranchFixture, TestCase):
 
     def test_normalizes_area_variant_in_direct_reply(self):
         first_result = self.service.process_text(
+            verified_transport=True,
             provider="telegram",
             external_user_id="123456789",
             external_chat_id="123456789",
@@ -1052,6 +1082,7 @@ class IncomingMessageServiceTests(LegacyBranchFixture, TestCase):
         )
 
         result = self.service.process_text(
+            verified_transport=True,
             provider="telegram",
             external_user_id="123456789",
             external_chat_id="123456789",
@@ -1079,6 +1110,7 @@ class IncomingMessageServiceTests(LegacyBranchFixture, TestCase):
 
     def test_no_se_conecta_is_accepted_as_failure_type(self):
         first_result = self.service.process_text(
+            verified_transport=True,
             provider="telegram",
             external_user_id="123456789",
             external_chat_id="123456789",
@@ -1123,6 +1155,7 @@ class IncomingMessageServiceTests(LegacyBranchFixture, TestCase):
         )
 
         result = self.service.process_text(
+            verified_transport=True,
             provider="telegram",
             external_user_id="123456789",
             external_chat_id="123456789",
@@ -1150,6 +1183,7 @@ class IncomingMessageServiceTests(LegacyBranchFixture, TestCase):
 
     def test_failure_detail_during_impact_question_updates_description(self):
         first_result = self.service.process_text(
+            verified_transport=True,
             provider="telegram",
             external_user_id="123456789",
             external_chat_id="123456789",
@@ -1193,6 +1227,7 @@ class IncomingMessageServiceTests(LegacyBranchFixture, TestCase):
         )
 
         result = self.service.process_text(
+            verified_transport=True,
             provider="telegram",
             external_user_id="123456789",
             external_chat_id="123456789",
@@ -1227,6 +1262,7 @@ class IncomingMessageServiceTests(LegacyBranchFixture, TestCase):
 
     def test_cleans_affirmation_from_operational_impact(self):
         first_result = self.service.process_text(
+            verified_transport=True,
             provider="telegram",
             external_user_id="123456789",
             external_chat_id="123456789",
@@ -1270,6 +1306,7 @@ class IncomingMessageServiceTests(LegacyBranchFixture, TestCase):
         )
 
         result = self.service.process_text(
+            verified_transport=True,
             provider="telegram",
             external_user_id="123456789",
             external_chat_id="123456789",
@@ -1301,6 +1338,7 @@ class IncomingMessageServiceTests(LegacyBranchFixture, TestCase):
 
     def test_ambiguous_equipment_reply_does_not_invent_equipment(self):
         first_result = self.service.process_text(
+            verified_transport=True,
             provider="telegram",
             external_user_id="123456789",
             external_chat_id="123456789",
@@ -1343,6 +1381,7 @@ class IncomingMessageServiceTests(LegacyBranchFixture, TestCase):
         )
 
         result = self.service.process_text(
+            verified_transport=True,
             provider="telegram",
             external_user_id="123456789",
             external_chat_id="123456789",
@@ -1446,6 +1485,7 @@ class IncomingMessageServiceTests(LegacyBranchFixture, TestCase):
         )
 
         draft = IncidentDraft.objects.create(
+            channel_account=TechnicianChannel.objects.filter(technician=self.technician).first(),
             technician=self.technician,
             extracted_data=legacy_draft_data({
                 "unit": "Estudio 2",
@@ -1603,6 +1643,7 @@ class IncomingMessageServiceTests(LegacyBranchFixture, TestCase):
         )
 
         draft = IncidentDraft.objects.create(
+            channel_account=TechnicianChannel.objects.filter(technician=self.technician).first(),
             technician=self.technician,
             extracted_data=legacy_draft_data({
                 "unit": "Estudio 4",
@@ -1712,6 +1753,7 @@ class IncomingMessageServiceTests(LegacyBranchFixture, TestCase):
         )
 
         draft = IncidentDraft.objects.create(
+            channel_account=TechnicianChannel.objects.filter(technician=self.technician).first(),
             technician=self.technician,
             extracted_data=legacy_draft_data({
                 "unit": "Estudio 4",
@@ -1815,6 +1857,7 @@ class IncidentListViewTests(TestCase):
 
     def setUp(self):
 
+        self.client.force_login(get_user_model().objects.create_user(username="api-admin", is_superuser=True, is_staff=True))
         self.technician = Technician.objects.create(
 
             full_name="Técnico Dashboard",
@@ -2413,6 +2456,7 @@ class IncidentDetailViewTests(TestCase):
 
     def setUp(self):
 
+        self.client.force_login(get_user_model().objects.create_user(username="api-admin", is_superuser=True, is_staff=True))
         self.technician = Technician.objects.create(
 
             full_name="Técnico Detalle",
@@ -2827,6 +2871,7 @@ class IncidentSummaryViewTests(TestCase):
 
     def setUp(self):
 
+        self.client.force_login(get_user_model().objects.create_user(username="api-admin", is_superuser=True, is_staff=True))
         self.technician = Technician.objects.create(
 
             full_name="Técnico Resumen",
@@ -3045,6 +3090,7 @@ class IncidentSummaryViewTests(TestCase):
 
 class IncidentAnalyticsViewTests(TestCase):
     def setUp(self):
+        self.client.force_login(get_user_model().objects.create_user(username="api-admin", is_superuser=True, is_staff=True))
         self.technician = Technician.objects.create(
             full_name="Reportante Analytics",
             is_active=True,

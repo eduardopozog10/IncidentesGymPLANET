@@ -49,15 +49,7 @@ class IncomingMessageService:
         if existing is not None:
             return None
 
-        first_name = str(sender.get("first_name") or "").strip()
-        last_name = str(sender.get("last_name") or "").strip()
-
-        full_name = " ".join(
-            part for part in (first_name, last_name) if part
-        )
-
-        if not full_name:
-            full_name = f"Reportante Telegram {external_user_id}"
+        full_name = "Cuenta Telegram pendiente de autorización"
 
         username = str(sender.get("username") or "").strip()
 
@@ -103,10 +95,13 @@ class IncomingMessageService:
         external_message_id: str,
         text: str,
         raw_payload: dict,
+        verified_transport: bool = False,
     ) -> dict:
+        if not verified_transport:
+            raise ChannelNotAuthorizedError("La identidad requiere un transporte verificado.")
         channel_account = (
             TechnicianChannel.objects.select_related(
-                "technician"
+                "technician", "branch"
             )
             .filter(
                 provider=provider,
@@ -134,7 +129,7 @@ class IncomingMessageService:
                 raw_payload=raw_payload,
             )
 
-        if channel_account is None:
+        if channel_account is None or not channel_account.branch_id or not channel_account.branch.is_active:
             raise ChannelNotAuthorizedError(
                 "No existe un reportante activo asociado "
                 "a este usuario y proveedor."
@@ -146,6 +141,8 @@ class IncomingMessageService:
         ).first()
 
         if existing_message is not None:
+            if existing_message.channel_account_id != channel_account.pk:
+                raise ChannelNotAuthorizedError("El identificador del mensaje pertenece a otra cuenta.")
             return {
                 "duplicate": True,
                 "message": existing_message,
@@ -168,6 +165,8 @@ class IncomingMessageService:
             ),
         )
         if not created:
+            if message.channel_account_id != channel_account.pk:
+                raise ChannelNotAuthorizedError("El identificador del mensaje pertenece a otra cuenta.")
             return {"duplicate": True, "message": message, "processing": None}
 
         try:

@@ -1,3 +1,4 @@
+from incidents.models import Branch
 from incidents.conversation_test_support import LegacyBranchFixture, with_test_branch, legacy_draft_data
 
 from django.test import TestCase, override_settings
@@ -22,6 +23,7 @@ class PriorityFlowTests(LegacyBranchFixture, TestCase):
         )
 
         TechnicianChannel.objects.create(
+            branch=Branch.objects.get(code="TEST-LEGACY"),
             technician=self.technician,
             provider=TechnicianChannel.Provider.TELEGRAM,
             external_user_id="priority-test-user",
@@ -33,6 +35,7 @@ class PriorityFlowTests(LegacyBranchFixture, TestCase):
 
     def test_keeps_draft_open_when_priority_is_unknown(self):
         first_result = self.service.process_text(
+            verified_transport=True,
             provider="telegram",
             external_user_id="priority-test-user",
             external_chat_id="priority-test-chat",
@@ -64,6 +67,7 @@ class PriorityFlowTests(LegacyBranchFixture, TestCase):
         draft_id = first_processing["draft_id"]
 
         second_result = self.service.process_text(
+            verified_transport=True,
             provider="telegram",
             external_user_id="priority-test-user",
             external_chat_id="priority-test-chat",
@@ -104,6 +108,7 @@ class PriorityFlowTests(LegacyBranchFixture, TestCase):
         )
 
         third_result = self.service.process_text(
+            verified_transport=True,
             provider="telegram",
             external_user_id="priority-test-user",
             external_chat_id="priority-test-chat",
@@ -148,6 +153,7 @@ class PriorityFlowTests(LegacyBranchFixture, TestCase):
         )
 
         fourth_result = self.service.process_text(
+            verified_transport=True,
             provider="telegram",
             external_user_id="priority-test-user",
             external_chat_id="priority-test-chat",
@@ -174,7 +180,7 @@ class PriorityFlowTests(LegacyBranchFixture, TestCase):
             incident.priority,
             Incident.Priority.MEDIUM,
         )
-        
+
         self.assertEqual(
             incident.area,
             "Redes",

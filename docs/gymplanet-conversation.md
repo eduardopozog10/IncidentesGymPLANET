@@ -2,19 +2,17 @@
 
 ## Catálogo y sucursal
 
-Todo reporte conversacional nuevo requiere una `Branch` activa y registrada.
-Se aceptan nombres o códigos sin distinguir mayúsculas ni tildes. No se crea
-una sucursal a partir de texto o de una respuesta de IA. Tampoco se elige la
-única sucursal activa sin evidencia del reportante.
+Todo reporte nuevo usa la sucursal activa asociada a la identidad corporativa
+verificada del remitente. No se pregunta ni se asigna desde texto, IA o IDs HTTP.
+La cuenta sin asociación autorizada no puede reportar. Una mención de otra sede
+bloquea la creación y exige resolver la discrepancia antes de confirmar.
 
-Se puede escribir, por ejemplo, `Sucursal: CODIGO; descripción del reporte`,
-mencionar un nombre registrado o responderlo cuando se pregunte. Si varios
-nombres coinciden, se piden códigos y luego se exige la confirmación final.
-Las sedes inactivas o inexistentes no permiten finalizar el reporte.
+Los nombres y códigos se comparan sin distinguir tildes o mayúsculas únicamente
+para comprobar coherencia con la asociación, nunca para cambiarla. No se crean
+sucursales desde conversaciones ni se ejecuta su carga inicial automáticamente.
 
-Si no hay sucursales activas, el asistente informa que falta configuración,
-no invoca la IA para inventar una sede y no crea el reporte. No ejecuta
-`seed_gymplanet_branches` ni carga datos automáticamente.
+La vinculación manual, el aislamiento de borradores, la política de acceso y el
+estado de migraciones se detallan en [cuentas corporativas y seguridad](corporate-accounts-security.md).
 
 ## Incidencias y solicitudes
 
@@ -77,7 +75,7 @@ por la autorización del reportante y la deduplicación por canal e identificado
 externo, igual que los demás mensajes. El acceso automático de desarrollo sigue
 controlado por la configuración existente; no se activa en esta entrega.
 
-La creación de borradores y la cancelación se serializan por reportante. La
+La creación de borradores y la cancelación se serializan y aíslan por cuenta. La
 deduplicación usa además la restricción única de mensajes de PostgreSQL.
 Los códigos de reporte históricos se conservan por compatibilidad; este lote
 no renumera ni reescribe registros existentes.
@@ -94,13 +92,12 @@ Las pruebas usan mock o proveedores simulados; nunca invocan Gemini ni Telegram
 reales y el correo de Django usa memoria durante los tests. El handler Telegram
 se prueba mediante un proveedor que solo registra los mensajes en memoria.
 
-Las migraciones `0013` y `0014` se aplicaron y verificaron en la base principal
-con la autorización recibida: 32 migraciones y 22 tablas, sin datos operativos.
-`0015` se aplicó **solo** en `test_incidentes_gymplanet_db`. Requiere revisión y
-autorización antes de aplicarla a la principal y utilizar allí los nuevos campos.
-Las sucursales y categorías reales requieren su propia carga autorizada posterior.
+Las migraciones 0013, 0014 y 0015 se aplicaron con autorización a la principal:
+33 migraciones, 22 tablas y ningún dato operativo. Las nuevas 0016/0017 se validan
+solo en `test_incidentes_gymplanet_db` y requieren autorización antes de aplicarse
+a la principal. Las sucursales y cuentas reales requieren su propia carga manual.
 
-## Archivos de esta entrega y validación
+## Antecedente: entrega conversacional anterior
 
 - Modelo y administración: `incidents/models.py`, `incidents/admin.py`.
 - Contrato y proveedores: `incidents/ai/schemas.py`, `incidents/ai/mock_provider.py`,
@@ -120,7 +117,8 @@ Las sucursales y categorías reales requieren su propia carga autorizada posteri
   `incidents/messaging/test_telegram_auto_registration.py`.
 - Documentación: este archivo, `docs/inventory-maintenance.md` y `README.md`.
 
-Validación final: 220 pruebas aprobadas, sin fallos ni errores, exclusivamente en
-la base de pruebas; `check`, `makemigrations --check --dry-run` y comprobación de
-espacios del diff correctos. No se alteraron migraciones 0001–0014 ni dependencias.
-La base principal conserva 32 migraciones y 22 tablas, sin registros operativos.
+La entrega anterior aprobó 220 pruebas. La entrega de identidad corporativa
+conserva esas regresiones adaptadas y agrega 46 casos: **266 pruebas aprobadas**.
+`check`, `makemigrations --check --dry-run` y `git diff --check` también se validan.
+La principal conserva 33 migraciones y 22 tablas; pruebas tiene 35 migraciones y
+22 tablas. Ninguna contiene registros operativos creados por las pruebas.

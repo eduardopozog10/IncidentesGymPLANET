@@ -1,3 +1,4 @@
+from incidents.models import Branch
 from incidents.conversation_test_support import LegacyBranchFixture, with_test_branch, legacy_draft_data
 
 from django.test import TestCase, override_settings
@@ -26,6 +27,7 @@ class TelegramAutoRegistrationTests(LegacyBranchFixture, TestCase):
         chat_type="private",
     ):
         return self.service.process_text(
+            verified_transport=True,
             provider="telegram",
             external_user_id=self.user_id,
             external_chat_id=self.user_id,
@@ -52,9 +54,8 @@ class TelegramAutoRegistrationTests(LegacyBranchFixture, TestCase):
         )
 
     def test_registers_new_telegram_user_automatically(self):
-        result = self.send_message("auto-register-1")
-
-        self.assertFalse(result["duplicate"])
+        with self.assertRaises(ChannelNotAuthorizedError):
+            self.send_message("auto-register-1")
 
         channel = TechnicianChannel.objects.get(
             provider="telegram",
@@ -63,7 +64,7 @@ class TelegramAutoRegistrationTests(LegacyBranchFixture, TestCase):
 
         self.assertEqual(
             channel.technician.full_name,
-            "Usuario Prueba",
+            "Cuenta Telegram pendiente de autorización",
         )
 
         self.assertEqual(
@@ -76,12 +77,15 @@ class TelegramAutoRegistrationTests(LegacyBranchFixture, TestCase):
             "usuario_prueba",
         )
 
+        self.assertIsNone(channel.branch_id)
         self.assertTrue(channel.is_active)
         self.assertTrue(channel.technician.is_active)
 
     def test_does_not_duplicate_existing_user(self):
-        self.send_message("auto-register-1")
-        self.send_message("auto-register-2")
+        with self.assertRaises(ChannelNotAuthorizedError):
+            self.send_message("auto-register-1")
+        with self.assertRaises(ChannelNotAuthorizedError):
+            self.send_message("auto-register-2")
 
         self.assertEqual(
             Technician.objects.count(),
@@ -100,6 +104,7 @@ class TelegramAutoRegistrationTests(LegacyBranchFixture, TestCase):
         )
 
         TechnicianChannel.objects.create(
+            branch=Branch.objects.get(code="TEST-LEGACY"),
             technician=reporter,
             provider="telegram",
             external_user_id=self.user_id,
@@ -122,6 +127,7 @@ class TelegramAutoRegistrationTests(LegacyBranchFixture, TestCase):
         )
 
         TechnicianChannel.objects.create(
+            branch=Branch.objects.get(code="TEST-LEGACY"),
             technician=reporter,
             provider="telegram",
             external_user_id=self.user_id,

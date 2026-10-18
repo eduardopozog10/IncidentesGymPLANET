@@ -258,9 +258,15 @@ class TechnicianChannel(models.Model):
         TELEGRAM = "telegram", "Telegram"
         WHATSAPP = "whatsapp", "WhatsApp"
 
+    branch = models.ForeignKey(
+        Branch, on_delete=models.PROTECT, related_name="corporate_accounts",
+        null=True, blank=True, verbose_name="sucursal autorizada",
+        help_text="Cuenta corporativa compartida; no identifica necesariamente a una persona.",
+    )
+
     technician = models.ForeignKey(
         Technician,
-        on_delete=models.CASCADE,
+        on_delete=models.PROTECT,
         related_name="channels",
         verbose_name="reportante",
     )
@@ -307,6 +313,18 @@ class TechnicianChannel(models.Model):
                 name="unique_user_per_messaging_provider",
             ),
         ]
+
+    def clean(self):
+        super().clean()
+        self.external_user_id = self.external_user_id.strip()
+        if not self.external_user_id:
+            raise ValidationError({"external_user_id": "Se requiere una identidad del proveedor."})
+        if self.is_active and self.branch_id and not self.branch.is_active:
+            raise ValidationError({"branch": "La sucursal debe estar activa para autorizar la cuenta."})
+        if self.pk and ChannelMessage.objects.filter(channel_account_id=self.pk).exists():
+            previous = type(self).objects.get(pk=self.pk)
+            if any(getattr(previous, f) != getattr(self, f) for f in ("provider", "external_user_id", "technician_id")):
+                raise ValidationError("No se puede reasignar la identidad de una cuenta con historial. Desactívela y cree otra.")
 
     def __str__(self):
         return (
@@ -642,7 +660,7 @@ class ChannelMessage(models.Model):
     )
     channel_account = models.ForeignKey(
         TechnicianChannel,
-        on_delete=models.SET_NULL,
+        on_delete=models.PROTECT,
         related_name="messages",
         null=True,
         blank=True,
@@ -743,6 +761,10 @@ class IncidentDraft(models.Model):
         EXPIRED = "expired", "Expirado"
         CANCELLED = "cancelled", "Cancelado"
 
+    channel_account = models.ForeignKey(
+        TechnicianChannel, on_delete=models.PROTECT, null=True, blank=True,
+        related_name="drafts", verbose_name="cuenta de origen",
+    )
     technician = models.ForeignKey(
         Technician,
         on_delete=models.PROTECT,
@@ -811,13 +833,20 @@ class IncidentDraft(models.Model):
         ordering = ["-updated_at"]
         constraints = [
             models.UniqueConstraint(
-                fields=["technician"],
+                fields=["channel_account"],
                 condition=models.Q(
-                    status__in=["collecting", "ready"],
+                    channel_account__isnull=False, status__in=["collecting", "ready"],
                 ),
-                name="unique_active_draft_per_technician",
+                name="unique_active_draft_per_account",
             ),
         ]
+
+    def clean(self):
+        super().clean()
+        if self.channel_account_id and self.channel_account.technician_id != self.technician_id:
+            raise ValidationError({"channel_account": "La cuenta debe corresponder al reportante del borrador."})
+        if self.channel_account_id and self.initial_message_id and self.initial_message.channel_account_id != self.channel_account_id:
+            raise ValidationError({"initial_message": "El mensaje inicial pertenece a otra cuenta."})
 
     def __str__(self):
         return (

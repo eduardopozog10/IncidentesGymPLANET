@@ -10,7 +10,7 @@ from incidents.ai.schemas import IncidentExtractionResult
 from incidents.messaging.telegram_update_handler import TelegramUpdateHandler
 from incidents.models import Branch, BranchArea, ChannelMessage, EquipmentCategory, GymAsset, Incident, IncidentDraft, RequestCategory, Technician, TechnicianChannel
 from incidents.services.gymplanet_conversation import GymPlanetContext
-from incidents.services.incoming_message_service import IncomingMessageService
+from incidents.services.incoming_message_service import IncomingMessageService, ChannelNotAuthorizedError
 from incidents.services.incident_processor import IncidentProcessor
 
 
@@ -21,7 +21,7 @@ class GymPlanetConversationTests(TestCase):
         cls.branch = Branch.objects.create(name="Quilín", code="QUILIN")
         cls.other_branch = Branch.objects.create(name="Peñalolén", code="PENALOLEN")
         cls.reporter = Technician.objects.create(full_name="Reportante de prueba")
-        TechnicianChannel.objects.create(technician=cls.reporter, provider="telegram", external_user_id="test-user", external_chat_id="test-chat")
+        TechnicianChannel.objects.create(branch=cls.branch, technician=cls.reporter, provider="telegram", external_user_id="test-user", external_chat_id="test-chat")
 
     def setUp(self):
         self.service = IncomingMessageService()
@@ -29,7 +29,7 @@ class GymPlanetConversationTests(TestCase):
 
     def send(self, text, message_id=None):
         self.number += 1
-        return self.service.process_text(provider="telegram", external_user_id="test-user", external_chat_id="test-chat", external_message_id=message_id or f"test:{self.number}", text=text, raw_payload={})
+        return self.service.process_text(verified_transport=True, provider="telegram", external_user_id="test-user", external_chat_id="test-chat", external_message_id=message_id or f"test:{self.number}", text=text, raw_payload={})
 
     def complete_incident(self, branch="QUILIN", priority="alta"):
         return self.send(f"Sucursal {branch}; área Cardio, la trotadora 1 no enciende, impide entrenar, prioridad {priority}")["processing"]
@@ -49,59 +49,51 @@ class GymPlanetConversationTests(TestCase):
         self.assertIn("Sucursal QUILIN", incident.original_message)
 
     def test_branch_resolution_ignores_case_and_accents(self):
-        result = self.complete_incident(branch="pEnAlOlEn")
-        self.assertEqual(result["extracted_data"]["branch_id"], self.other_branch.pk)
-        self.assertIn("Peñalolén", result["reply"])
+        result = self.complete_incident(branch="qUiLiN")
+        self.assertEqual(result["extracted_data"]["branch_id"], self.branch.pk)
+        self.assertIn("Quilín", result["reply"])
 
-    def test_missing_branch_is_asked_without_losing_report(self):
+    def test_account_supplies_branch_without_losing_report(self):
         result = self.send("Área Cardio, trotadora 1 no enciende, impide entrenar, prioridad alta")["processing"]
-        self.assertIn("branch", result["missing_fields"])
-        self.assertIn("sucursal", result["reply"])
-        result = self.send("Quilín")["processing"]
         self.assertEqual(result["missing_fields"], [])
-        self.assertEqual(result["extracted_data"]["failure_type"], "No enciende")
+        self.assertEqual(result["extracted_data"]["branch_id"], self.branch.pk)
         self.assertTrue(self.send("Sí")["processing"]["incident_created"])
 
-    def test_single_configured_branch_is_not_selected_without_evidence(self):
+    def test_single_branch_uses_authorized_account(self):
         self.other_branch.is_active = False
         self.other_branch.save()
         result = self.send("Área Cardio, trotadora 1 no enciende, impide entrenar, prioridad alta")["processing"]
-        self.assertIn("branch", result["missing_fields"])
-        self.assertIsNone(result["extracted_data"]["branch_id"])
+        self.assertEqual(result["extracted_data"]["branch_id"], self.branch.pk)
 
-    def test_ambiguous_names_require_unique_code(self):
+    def test_ambiguous_branch_text_never_overrides_account(self):
         Branch.objects.create(name="Centro", code="CENTRO-A")
         Branch.objects.create(name="Centro", code="CENTRO-B")
         result = self.complete_incident(branch="Centro")
-        self.assertIn("branch", result["missing_fields"])
-        self.assertIn("ambigua", result["reply"])
-        self.assertIn("CENTRO-A", result["reply"])
-        result = self.send("CENTRO-B")["processing"]
-        self.assertEqual(result["missing_fields"], [])
-        self.assertIn("CENTRO-B", result["reply"])
+        self.assertEqual(result["action"], "branch_mismatch")
+        self.assertFalse(Incident.objects.exists())
 
     def test_multiple_branch_mentions_do_not_choose_one(self):
-        context = GymPlanetContext("Ocurre en Quilín o Peñalolén")
-        self.assertIsNone(context.branch)
-        self.assertIn("ambigua", context.branch_issue)
+        context = GymPlanetContext("Ocurre en Quilín o Peñalolén", branch=self.branch)
+        self.assertEqual(context.branch, self.branch)
+        self.assertIsNotNone(context.branch_issue)
 
     def test_unknown_branch_is_not_created(self):
         result = self.complete_incident(branch="INEXISTENTE")
-        self.assertIn("branch", result["missing_fields"])
+        self.assertEqual(result["action"], "branch_mismatch")
         self.assertEqual(Branch.objects.count(), 2)
         self.assertFalse(Incident.objects.exists())
 
     def test_inactive_branch_is_rejected(self):
         self.branch.is_active = False
         self.branch.save()
-        result = self.complete_incident()
-        self.assertIn("inactiva", result["reply"])
-        self.assertIn("branch", result["missing_fields"])
+        with self.assertRaises(ChannelNotAuthorizedError):
+            self.complete_incident()
+        self.assertFalse(Incident.objects.exists())
 
-    def test_no_active_branches_reports_missing_configuration(self):
+    def test_no_active_branches_prevents_authorization(self):
         Branch.objects.update(is_active=False)
-        result = self.complete_incident()
-        self.assertEqual(result["action"], "configuration_required")
+        with self.assertRaises(ChannelNotAuthorizedError):
+            self.complete_incident()
         self.assertFalse(Incident.objects.exists())
         self.assertFalse(IncidentDraft.objects.exists())
 
@@ -110,22 +102,23 @@ class GymPlanetConversationTests(TestCase):
         provider.extract_incident.return_value = IncidentExtractionResult(branch="QUILIN", area="Cardio", location_context="Cardio", equipment="Trotadora 1", failure_type="No enciende", description="La trotadora no enciende", operational_impact="Impide entrenar", priority="high")
         self.service = IncomingMessageService(incident_processor=IncidentProcessor(ai_provider=provider))
         result = self.send("La trotadora no enciende")["processing"]
-        self.assertIn("branch", result["missing_fields"])
+        self.assertEqual(result["extracted_data"]["branch_id"], self.branch.pk)
         self.assertIn("priority", result["missing_fields"])
 
-    def test_branch_correction_requires_new_confirmation(self):
+    def test_foreign_branch_correction_requires_authorized_resolution(self):
         self.complete_incident()
         result = self.send("Sucursal PENALOLEN;")["processing"]
-        self.assertIn("Peñalolén", result["reply"])
-        self.assertFalse(Incident.objects.exists())
-        self.send("Sí")
-        self.assertEqual(Incident.objects.get().branch, self.other_branch)
+        self.assertEqual(result["action"], "branch_mismatch")
+        self.assertFalse(self.send("Sí")["processing"]["incident_created"])
+        self.send("Sucursal QUILIN;")
+        self.assertTrue(self.send("Sí")["processing"]["incident_created"])
+        self.assertEqual(Incident.objects.get().branch, self.branch)
 
     def test_catalog_changes_after_summary_prevent_creation(self):
         self.complete_incident()
         Branch.objects.filter(pk=self.branch.pk).update(is_active=False)
-        result = self.send("Sí")["processing"]
-        self.assertFalse(result["incident_created"])
+        with self.assertRaises(ChannelNotAuthorizedError):
+            self.send("Sí")
         self.assertFalse(Incident.objects.exists())
 
     def test_priority_is_never_assigned_from_urgency_or_risk(self):
@@ -243,8 +236,9 @@ class GymPlanetConversationTests(TestCase):
         self.assertEqual(provider.extract_incident.call_count, 1)
 
     def test_existing_nontelegram_channel_uses_the_same_validated_flow(self):
-        TechnicianChannel.objects.create(technician=self.reporter, provider="whatsapp", external_user_id="test-phone", external_chat_id="test-phone")
+        TechnicianChannel.objects.create(branch=self.branch, technician=self.reporter, provider="whatsapp", external_user_id="test-phone", external_chat_id="test-phone")
         result = self.service.process_text(
+            verified_transport=True,
             provider="whatsapp", external_user_id="test-phone", external_chat_id="test-phone",
             external_message_id="whatsapp:1", text="Sucursal QUILIN; área Cardio, trotadora 1 no enciende, impide entrenar, prioridad alta", raw_payload={},
         )["processing"]
@@ -346,13 +340,14 @@ class FakeTelegram:
 
 class TelegramGymPlanetTests(TestCase):
     def setUp(self):
+        self.branch = Branch.objects.create(name="Quilín", code="QUILIN")
         self.reporter = Technician.objects.create(full_name="Reportante de prueba")
-        self.channel = TechnicianChannel.objects.create(technician=self.reporter, provider="telegram", external_user_id="test-user", external_chat_id="test-chat")
+        self.channel = TechnicianChannel.objects.create(branch=self.branch, technician=self.reporter, provider="telegram", external_user_id="test-user", external_chat_id="test-chat")
         self.provider = FakeTelegram()
         self.handler = TelegramUpdateHandler(messaging_provider=self.provider)
 
     def update(self, text, number=1):
-        return {"message": {"message_id": number, "from": {"id": "test-user"}, "chat": {"id": "test-chat"}, "text": text}}
+        return {"message": {"message_id": number, "from": {"id": "test-user"}, "chat": {"id": "test-chat", "type": "private"}, "text": text}}
 
     def test_start_is_gymplanet_branded_and_deduplicated(self):
         update = self.update("/start")
@@ -370,7 +365,7 @@ class TelegramGymPlanetTests(TestCase):
         self.assertFalse(Incident.objects.exists())
 
     def test_cancel_is_authorized_and_deduplicated(self):
-        draft = IncidentDraft.objects.create(technician=self.reporter)
+        draft = IncidentDraft.objects.create(channel_account=TechnicianChannel.objects.filter(technician=self.reporter).first(), technician=self.reporter)
         update = self.update("/cancelar")
         self.assertEqual(self.handler.handle(update)["action"], "draft_cancelled")
         self.assertEqual(self.handler.handle(update)["action"], "duplicate_message")
@@ -382,7 +377,7 @@ class TelegramGymPlanetTests(TestCase):
         service.cancel_active_draft.return_value = None
         handler = TelegramUpdateHandler(messaging_provider=self.provider, draft_service=service)
         self.assertEqual(handler.handle(self.update("/cancelar"))["action"], "no_active_draft")
-        service.cancel_active_draft.assert_called_once_with(technician=self.reporter)
+        service.cancel_active_draft.assert_called_once_with(technician=self.reporter, channel_account=self.channel)
 
 
 class ProviderContractTests(TestCase):
