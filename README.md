@@ -1,5 +1,10 @@
 # IncidentesGymPLANET
 
+El [lote 10: inventario, mantenimiento y conversación](docs/lot10-inventory-conversation.md)
+extiende los módulos existentes. Su migración 0023 requiere revisión y autorización
+antes de utilizar esta versión contra la principal.
+
+
 El [lote 9: estados y correo](docs/lot9-states-email.md) consolida cinco estados y
 una outbox durable. Revisar y autorizar 0021/0022 antes de usar esta versión con
 la principal; SMTP queda desactivado por defecto.

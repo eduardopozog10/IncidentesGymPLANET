@@ -94,7 +94,7 @@ class GymPlanetContext:
         self.kind = report_type(text, self.previous.get("report_type"))
         found = matches(Branch.objects.all(), text)
         # An explicit branch label corroborates identity; it never authorizes it.
-        selection = re.search(r"\bsucursal\s*:?\s*([^;,\n]+)[;,\n]", text, re.I)
+        selection = re.search(r"\bsucursal\s*:?\s*([^;,.\n]+)[;,.\n]", text, re.I)
         if selection:
             found = matches(Branch.objects.all(), selection.group(1))
         self.branch = branch
@@ -174,7 +174,7 @@ class GymPlanetContext:
                 data["gym_asset_id"] = asset.pk
                 data["equipment"] = f"{asset.name} ({asset.code})"
         elif assets:
-            self.catalog_issue = "El equipo es ambiguo o está inactivo. Puedes indicar el código o responder «Continuar sin activo». Códigos activos de esta sucursal: " + ", ".join(a.code for a in assets)
+            data["gym_asset_id"] = None  # Keep literal equipment; inventory association can wait.
         elif data.get("equipment") and not data.get("_free_asset"):
             foreign = matches(GymAsset.objects.exclude(branch=self.branch), data["equipment"])
             if foreign and any(normalize(data["equipment"]) == normalize(a.code) for a in foreign):

@@ -87,7 +87,7 @@ def handle_controls(processor, message, draft, context):
     choice = priority_choice(text)
     if choice and ("prioridad" in normalized or normalized in {"baja", "media", "alta", "critica", "low", "medium", "high", "critical"}):
         return resummarize(processor, message, draft, context, {"priority": choice, "_priority_explicit": True})
-    equipment = re.search(r"\bno era .+?[,;]?\s+(?:era|es)\s+(.+)", text, re.I)
+    equipment = re.search(r"\bno (?:era|es) .+?[,;]?\s+(?:era|es)\s+(.+)", text, re.I)
     if equipment and not re.match(r"(?:la de|el de|otra|otro)\b", plain(equipment[1])):
         value = equipment[1].strip(" .")
         if re.search(r"\b(?:o|quizas|tal vez)\b", plain(value)):

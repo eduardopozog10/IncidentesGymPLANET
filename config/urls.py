@@ -5,7 +5,16 @@ from django.urls import include, path
 from incidents.dashboard_views import DashboardView, ReportListView, ReportDetailView, BranchListView, AssetListView, AssetDetailView
 
 
+from incidents.inventory_views import AssetEditView, CategoryView, MaintenanceEditView, MaintenanceDashboard
+
 urlpatterns = [
+    path("dashboard/assets/new/",AssetEditView.as_view(),name="asset-create"),
+    path("dashboard/assets/<int:pk>/edit/",AssetEditView.as_view(),name="asset-edit"),
+    path("dashboard/assets/categories/",CategoryView.as_view(),name="asset-categories"),
+    path("dashboard/assets/categories/<int:pk>/",CategoryView.as_view(),name="asset-category-edit"),
+    path("dashboard/maintenance/",MaintenanceDashboard.as_view(),name="maintenance-dashboard"),
+    path("dashboard/assets/<int:asset_id>/maintenance/new/",MaintenanceEditView.as_view(),name="maintenance-create"),
+    path("dashboard/assets/<int:asset_id>/maintenance/<int:pk>/",MaintenanceEditView.as_view(),name="maintenance-edit"),
     path("operations/login/", LoginView.as_view(template_name="incidents/operations_login.html", next_page="/dashboard/"), name="operations-login"),
     path("operations/logout/", LogoutView.as_view(next_page="/operations/login/"), name="operations-logout"),
     path("admin/", admin.site.urls),

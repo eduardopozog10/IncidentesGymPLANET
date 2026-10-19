@@ -2,14 +2,14 @@ from django import forms
 from django.contrib import messages
 from django.contrib.auth.mixins import UserPassesTestMixin
 from django.core.paginator import Paginator
-from django.db.models import Count, Q, Avg, F
+from django.db.models import Count, Q, Avg, F, Max, Min, Prefetch
 from django.db.models.functions import TruncDate
 from django.http import HttpResponseRedirect
 from django.shortcuts import get_object_or_404
 from django.urls import reverse
 from django.views.generic import TemplateView
 
-from incidents.models import Branch, GymAsset, Incident
+from incidents.models import Branch, GymAsset, Incident, ReportActivity, MaintenanceRecord
 from incidents.report_filters import OPEN_STATUSES, ReportFilters, AssetFilters
 from incidents.services.operations import can_operate, manage_report
 from django.core.exceptions import ValidationError
@@ -117,7 +117,7 @@ class ReportDetailView(OperationalView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         report = get_object_or_404(Incident.objects.select_related("branch", "branch_area", "technician", "gym_asset", "request_category").prefetch_related("maintenance_records__asset"), pk=self.kwargs["pk"])
-        context.update(assignment=report.reportassignments.select_related("actor").first(), activity=Paginator(report.reportactivitys.select_related("actor").all(), 30).get_page(self.request.GET.get("activity_page")), report=report, status_form=kwargs.get("status_form") or StatusForm(initial={"status": report.status}))
+        context.update(asset_choices=GymAsset.objects.filter(branch_id=report.branch_id,is_active=True).select_related("branch"), assignment=report.reportassignments.select_related("actor").first(), activity=Paginator(report.reportactivitys.select_related("actor").all(), 30).get_page(self.request.GET.get("activity_page")), report=report, status_form=kwargs.get("status_form") or StatusForm(initial={"status": report.status}))
         return context
 
     def post(self, request, *args, **kwargs):
@@ -130,13 +130,13 @@ class ReportDetailView(OperationalView):
                     return self.render_to_response(self.get_context_data(status_form=form), status=400)
                 manage_report(self.kwargs["pk"], request.user, "status", **form.cleaned_data)
             else:
-                manage_report(self.kwargs["pk"], request.user, action, **{key:request.POST.get(key, "") for key in ("responsible","person_name","notes","comment")})
+                manage_report(self.kwargs["pk"], request.user, action, **{key:request.POST.get(key, "") for key in ("responsible","person_name","notes","comment","asset_id")})
         except ValidationError as error:
             context = self.get_context_data(status_form=form) if action == "status" else self.get_context_data()
             context["operation_errors"] = error.messages
             context["submitted"] = request.POST
             return self.render_to_response(context, status=400)
-        messages.success(request, {"status":"Estado actualizado correctamente.", "assign":"Asignación registrada correctamente.", "comment":"Seguimiento registrado correctamente."}[action])
+        messages.success(request, {"status":"Estado actualizado correctamente.", "assign":"Asignación registrada correctamente.", "asset":"Asociación de activo actualizada.", "comment":"Seguimiento registrado correctamente."}[action])
         return HttpResponseRedirect(reverse("report-detail", args=[self.kwargs["pk"]]))
 
 
@@ -170,7 +170,7 @@ class AssetListView(OperationalView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         filters = AssetFilters(self.request.GET)
-        assets = GymAsset.objects.select_related("branch", "branch_area", "category").prefetch_related("maintenance_records__branch").annotate(incident_count=Count("incidents", filter=Q(incidents__report_type="incident")))
+        assets = GymAsset.objects.select_related("branch", "branch_area", "category").prefetch_related(Prefetch("maintenance_records",queryset=MaintenanceRecord.objects.select_related("branch").order_by("-created_at")[:3],to_attr="recent_maintenance")).annotate(incident_count=Count("incidents", filter=Q(incidents__report_type="incident"),distinct=True), last_maintenance=Max("maintenance_records__performed_at",filter=Q(maintenance_records__status="completed")))
         if filters.is_valid():
             data = filters.cleaned_data
             if data.get("branch"):
@@ -182,7 +182,7 @@ class AssetListView(OperationalView):
                 assets = assets.filter(branch_area__name__icontains=data["area"])
             if data.get("search"):
                 text = data["search"]
-                assets = assets.filter(Q(code__icontains=text) | Q(name__icontains=text) | Q(category__name__icontains=text))
+                assets = assets.filter(Q(code__icontains=text) | Q(name__icontains=text) | Q(category__name__icontains=text) | Q(brand__icontains=text) | Q(model__icontains=text) | Q(serial_number__icontains=text))
         else:
             assets = assets.none()
         context.update(filters=filters, inventory=True, page_obj=Paginator(assets.order_by("branch__name", "code"), 20).get_page(self.request.GET.get("page")))
@@ -196,7 +196,11 @@ class AssetDetailView(OperationalView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        asset = get_object_or_404(GymAsset.objects.select_related("branch", "branch_area", "category").prefetch_related("maintenance_records__branch"), pk=self.kwargs["pk"])
-        reports = asset.incidents.filter(report_type="incident").select_related("branch", "technician").order_by("-created_at", "-pk")
-        context.update(asset=asset, report_type="incident", page_obj=Paginator(reports, 20).get_page(self.request.GET.get("page")))
+        asset = get_object_or_404(GymAsset.objects.select_related("branch", "branch_area", "category"), pk=self.kwargs["pk"])
+        reports = asset.incidents.filter(report_type="incident").select_related("branch", "technician").prefetch_related(Prefetch("reportactivitys",queryset=ReportActivity.objects.filter(action="solution"),to_attr="solutions")).order_by("-created_at", "-pk")
+        from django.utils import timezone
+        from datetime import timedelta
+        next_date=asset.maintenance_records.filter(status__in=["scheduled","in_progress"],scheduled_at__isnull=False).aggregate(value=Min("scheduled_at"))["value"]
+        dates=[date for date in [next_date,asset.next_maintenance_at] if date]
+        context.update(next_maintenance=min(dates) if dates else None, recent_failures=asset.incidents.filter(report_type="incident",created_at__gte=timezone.now()-timedelta(days=90)).count(), last_maintenance=asset.maintenance_records.filter(status="completed").aggregate(value=Max("performed_at"))["value"], maintenance_page=Paginator(asset.maintenance_records.select_related("branch"),30).get_page(self.request.GET.get("maintenance_page")), asset_history=Paginator(asset.activity.select_related("actor"),30).get_page(self.request.GET.get("activity_page")), asset=asset, report_type="incident", page_obj=Paginator(reports, 20).get_page(self.request.GET.get("page")))
         return context

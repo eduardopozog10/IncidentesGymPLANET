@@ -1149,3 +1149,5 @@ td small {
 .skip-link {color:var(--text-on-brand-hover);}
 
 textarea {width:100%;max-width:100%;min-height:85px;background:var(--background-elevated);color:var(--text-primary);border:1px solid var(--border-default);border-radius:7px;padding:10px;font:inherit;resize:vertical} textarea:focus-visible {outline:2px solid var(--focus-ring)}
+
+.inventory-form {max-width:900px}.inventory-form form {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 24px}.inventory-form form p {min-width:0}.inventory-form input[type=checkbox] {width:auto}.inventory-form .errorlist {grid-column:1/-1}@media(max-width:760px){.inventory-form form{grid-template-columns:1fr}}

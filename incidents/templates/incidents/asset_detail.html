@@ -1,7 +1,7 @@
 {% extends 'incidents/operational_base.html' %}
 {% block subtitle %}{{ asset.name }} · {{ asset.branch.name }} · {{ asset.code }}{% endblock %}
 {% block heading_action %}<a class="button" href="{% url 'dashboard-assets' %}?branch={{ asset.branch_id }}">← Inventario de la sucursal</a>{% endblock %}
-{% block content %}
+{% block content %}<p><a class="button" href="{% url 'asset-edit' asset.pk %}">Editar activo</a> <a class="button" href="{% url 'maintenance-create' asset.pk %}">Registrar mantenimiento</a></p>
 <article class="panel">
 <div class="panel-heading"><h2>{{ asset.name }}</h2><span class="badge {% if asset.operational_status == 'out_of_service' %}priority-high{% else %}status-reported{% endif %}">{{ asset.get_operational_status_display }}</span></div>
 <dl class="details">
@@ -12,11 +12,11 @@
 {% if asset.brand %}<div><dt>Marca</dt><dd>{{ asset.brand }}</dd></div>{% endif %}
 {% if asset.model %}<div><dt>Modelo</dt><dd>{{ asset.model }}</dd></div>{% endif %}
 {% if asset.description %}<div class="wide"><dt>Descripción</dt><dd>{{ asset.description|linebreaksbr }}</dd></div>{% endif %}
-</dl><p class="context-note">Reportar una falla no cambia automáticamente el estado operativo del activo. Su administración requiere autorización explícita.</p>
+<div><dt>Serie</dt><dd>{{ asset.serial_number|default:'No registrada' }}</dd></div><div><dt>Incorporación</dt><dd>{{ asset.acquired_on|date:'d/m/Y'|default:'No registrada' }}</dd></div><div><dt>Último mantenimiento completado</dt><dd>{{ last_maintenance|date:'d/m/Y H:i'|default:'Sin registro' }}</dd></div><div><dt>Próximo mantenimiento</dt><dd>{{ next_maintenance|date:'d/m/Y H:i'|default:'Sin planificación' }}</dd></div><div class="wide"><dt>Observaciones</dt><dd>{{ asset.notes|linebreaksbr|default:'Sin observaciones' }}</dd></div></dl><p class="context-note">Reportar una falla no cambia automáticamente el estado operativo del activo. Su administración requiere autorización explícita.</p>
 </article>
-<section class="panel table-panel"><div class="panel-heading"><h2>Incidencias asociadas</h2><span class="chip">{{ page_obj.paginator.count }} reporte{{ page_obj.paginator.count|pluralize }}</span></div>
-{% include 'incidents/_report_table.html' with reports=page_obj %}{% include 'incidents/_pagination.html' %}</section>
+<p class="context-note">{{ recent_failures }} incidencias de este activo en 90 días.{% if recent_failures >= 2 %} Fallas recurrentes (indicador informativo).{% endif %}</p><section class="panel table-panel"><div class="panel-heading"><h2>Incidencias asociadas</h2><span class="chip">{{ page_obj.paginator.count }} reporte{{ page_obj.paginator.count|pluralize }}</span></div>
+{% include 'incidents/_report_table.html' with reports=page_obj %}{% for report in page_obj %}{% for solution in report.solutions %}<p>{{ report.code }} · Solución: {{ solution.description }}</p>{% endfor %}{% endfor %}{% include 'incidents/_pagination.html' %}</section>
 <section class="panel"><div class="panel-heading"><h2>Historial de mantenimiento</h2></div>
-{% for record in asset.maintenance_records.all %}<article class="maintenance"><strong>{{ record.get_maintenance_type_display }} · {{ record.get_status_display }}</strong><p>{{ record.description }}</p><small>{{ record.branch.name }} · {{ record.performed_at|default:record.created_at|date:'d/m/Y' }}</small></article>
-{% empty %}<p class="empty-inline">Sin mantenimiento registrado para este activo.</p>{% endfor %}</section>
-{% endblock %}
+{% for record in maintenance_page %}<article class="maintenance"><a href="{% url 'maintenance-edit' asset.pk record.pk %}">Actualizar mantenimiento</a> <strong>{{ record.get_maintenance_type_display }} · {{ record.get_status_display }}</strong><p>{{ record.description }}</p><p>{{ record.responsible }} · {{ record.result }}</p><p>{{ record.observations }}</p><small>{{ record.branch.name }} · {{ record.performed_at|default:record.created_at|date:'d/m/Y' }}</small></article>
+{% empty %}<p class="empty-inline">Sin mantenimiento registrado para este activo.</p>{% endfor %}<nav class="pagination" aria-label="Páginas de mantenimiento">{% if maintenance_page.has_previous %}<a href="{% querystring maintenance_page=maintenance_page.previous_page_number %}">Anterior</a>{% endif %}<span>Página {{ maintenance_page.number }} de {{ maintenance_page.paginator.num_pages }}</span>{% if maintenance_page.has_next %}<a href="{% querystring maintenance_page=maintenance_page.next_page_number %}">Siguiente</a>{% endif %}</nav></section>
+<section class="panel"><h2>Historial del activo</h2>{% for event in asset_history %}<p>{{ event.created_at|date:'d/m/Y H:i' }} · {{ event.actor.username }} · {{ event.description }}</p>{% empty %}<p>Sin acciones registradas desde la incorporación de esta función.</p>{% endfor %}<nav class="pagination" aria-label="Páginas de historial">{% if asset_history.has_previous %}<a href="{% querystring activity_page=asset_history.previous_page_number %}">Anterior</a>{% endif %}<span>Página {{ asset_history.number }} de {{ asset_history.paginator.num_pages }}</span>{% if asset_history.has_next %}<a href="{% querystring activity_page=asset_history.next_page_number %}">Siguiente</a>{% endif %}</nav></section>{% endblock %}

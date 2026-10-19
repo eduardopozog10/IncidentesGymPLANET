@@ -73,3 +73,19 @@ class MaintenanceAdminForm(forms.ModelForm):
     class Meta:
         model = MaintenanceRecord
         fields = "__all__"
+
+
+class AssetOperationalForm(GymAssetAdminForm):
+    class Meta:
+        model = GymAsset
+        fields = ["code","name","category","branch","branch_area","brand","model","serial_number","description","operational_status","is_active","acquired_on","next_maintenance_at","notes"]
+        widgets = {"acquired_on":forms.DateInput(format="%Y-%m-%d",attrs={"type":"date"}), "next_maintenance_at":forms.DateTimeInput(format="%Y-%m-%dT%H:%M",attrs={"type":"datetime-local"}), "description":forms.Textarea(attrs={"rows":3}), "notes":forms.Textarea(attrs={"rows":3})}
+
+
+class MaintenanceOperationalForm(MaintenanceAdminForm):
+    next_maintenance_at = forms.DateTimeField(required=False,label="Próximo mantenimiento (opcional)",widget=forms.DateTimeInput(format="%Y-%m-%dT%H:%M",attrs={"type":"datetime-local"}))
+
+    class Meta:
+        model = MaintenanceRecord
+        fields = ["maintenance_type","status","scheduled_at","performed_at","description","responsible","result","observations"]
+        widgets = {"scheduled_at":forms.DateTimeInput(format="%Y-%m-%dT%H:%M",attrs={"type":"datetime-local"}),"performed_at":forms.DateTimeInput(format="%Y-%m-%dT%H:%M",attrs={"type":"datetime-local"}),"description":forms.Textarea(attrs={"rows":3})}

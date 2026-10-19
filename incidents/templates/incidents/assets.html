@@ -1,4 +1,4 @@
-{% extends 'incidents/operational_base.html' %}{% block subtitle %}Disponibilidad e historial del equipamiento de tus gimnasios.{% endblock %}{% block content %}{% include 'incidents/_filters.html' %}<section class="panel table-panel">
+{% extends 'incidents/operational_base.html' %}{% block subtitle %}Disponibilidad e historial del equipamiento de tus gimnasios.{% endblock %}{% block content %}<p><a class="button primary" href="{% url 'asset-create' %}">Registrar activo</a> <a class="button" href="{% url 'asset-categories' %}">Categorías</a> <a class="button" href="{% url 'maintenance-dashboard' %}">Mantenimiento y recurrencia</a></p>{% include 'incidents/_filters.html' %}<section class="panel table-panel">
 <div class="panel-heading">
 <h2>Inventario registrado</h2>
 <span class="chip">{{ page_obj.paginator.count }} activo{{ page_obj.paginator.count|pluralize }}</span>
@@ -19,7 +19,7 @@
 <tbody>{% for asset in page_obj %}<tr>
 <td>
 <a class="report-code" href="{% url 'dashboard-asset-detail' asset.pk %}">{{ asset.name }}</a>
-<small>{{ asset.code }}{% if not asset.is_active %} · Inactivo{% endif %}</small>
+<small>{{ asset.brand }} {{ asset.model }} {{ asset.serial_number }}</small><small>{{ asset.code }}{% if not asset.is_active %} · Inactivo{% endif %}</small>
 </td>
 <td>{{ asset.branch.name }}<small>{{ asset.branch_area.name|default:'Sin área registrada' }}</small>
 </td>
@@ -30,7 +30,7 @@
 <td><a href="{% url 'dashboard-asset-detail' asset.pk %}">{{ asset.incident_count }} · Ver historial ↗</a></td>
 <td>
 <details>
-<summary>Ver historial</summary>{% for record in asset.maintenance_records.all %}<div class="maintenance">
+<summary>Últimos tres registros</summary>{% for record in asset.recent_maintenance %}<div class="maintenance">
 <strong>{{ record.get_maintenance_type_display }} · {{ record.get_status_display }}</strong>
 <p>{{ record.description }}</p>
 <small>{{ record.branch.name }} · {{ record.created_at|date:'d/m/Y' }}</small>

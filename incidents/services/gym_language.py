@@ -60,3 +60,13 @@ def request_intent(text):
         return False
     return bool(re.search(r"\b(?:se nos acabo|se acabo|nos faltan|necesitamos mas|necesito mas)\b", text) or
                 re.search(r"\b(?:necesito|necesitamos|requiero)\b.*\b(?:mantencion|mantenimiento|servicio|limpieza|reparacion)\b", text))
+
+
+def explicit_gym_equipment(text):
+    """Single literal gym noun phrase, without diagnoses or invented identifiers."""
+    normalized = plain(text)
+    pattern = r"\b(?:trotadora|bicicleta(?: estatica)?|eliptica|maquina de pecho|polea alta|rack de sentadillas)(?: \d+)?\b"
+    matches = list(re.finditer(pattern, normalized))
+    if len(matches) != 1 or re.search(r"\b(?:quizas|tal vez|no se si)\b", normalized):
+        return None
+    return matches[0].group().capitalize()

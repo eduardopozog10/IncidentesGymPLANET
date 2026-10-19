@@ -2,7 +2,7 @@
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import transaction
 from django.utils import timezone
-from incidents.models import Incident, ReportActivity, ReportAssignment
+from incidents.models import GymAsset, Incident, ReportActivity, ReportAssignment
 
 
 def can_operate(user):
@@ -33,6 +33,21 @@ def manage_report(pk, actor, action, **data):
         ReportAssignment.objects.create(report=report,actor=actor,**after)
         action = "reassigned" if previous else "assigned"
         description = "Responsable: " + after["responsible"] + (" — " + after["person_name"] if after["person_name"] else "")
+    elif action == "asset":
+        if report.report_type != "incident": raise ValidationError("Solo las incidencias admiten este vínculo.")
+        before={"gym_asset_id":report.gym_asset_id}
+        value=data.get("asset_id")
+        if value:
+            asset=GymAsset.objects.filter(pk=value,branch_id=report.branch_id,is_active=True).first() if str(value).isdigit() else None
+            if not asset: raise ValidationError("Selecciona un activo de la misma sucursal.")
+            report.gym_asset=asset
+        else: report.gym_asset=None
+        report.clean()  # Validate relations without rejecting unrelated legacy blank fields.
+        after={"gym_asset_id":report.gym_asset_id}
+        if before==after: return report
+        report.save(update_fields=["gym_asset","updated_at"])
+        ReportActivity.objects.create(report=report,actor=actor,action="asset_link",before=before,after=after,description="Asociación de activo actualizada")
+        return report
     elif action == "comment":
         description = text(data.get("comment"),4000,True)
     elif action == "status":

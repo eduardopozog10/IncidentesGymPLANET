@@ -150,6 +150,9 @@ class GymAsset(models.Model):
     serial_number = models.CharField(max_length=150, blank=True, verbose_name="número de serie")
     description = models.TextField(blank=True, verbose_name="descripción")
     operational_status = models.CharField(max_length=20, choices=OperationalStatus.choices, default=OperationalStatus.OPERATIONAL, verbose_name="estado operativo")
+    acquired_on = models.DateField(null=True, blank=True, verbose_name="fecha de incorporación")
+    next_maintenance_at = models.DateTimeField(null=True, blank=True, verbose_name="próximo mantenimiento")
+    notes = models.TextField(blank=True, verbose_name="observaciones")
     is_active = models.BooleanField(default=True, verbose_name="activo")
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="fecha de creación")
     updated_at = models.DateTimeField(auto_now=True, verbose_name="última actualización")
@@ -568,6 +571,7 @@ class MaintenanceRecord(models.Model):
     scheduled_at = models.DateTimeField(null=True, blank=True, verbose_name="fecha programada")
     performed_at = models.DateTimeField(null=True, blank=True, verbose_name="fecha de realización")
     description = models.TextField(verbose_name="trabajo a realizar o realizado")
+    result = models.TextField(blank=True, verbose_name="resultado")
     observations = models.TextField(blank=True, verbose_name="observaciones")
     responsible = models.CharField(max_length=200, blank=True, verbose_name="responsable o proveedor")
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="fecha de creación")
@@ -915,3 +919,23 @@ class NotificationOutbox(models.Model):
     class Meta:
         db_table = "notification_outbox"
         indexes = [models.Index(fields=["status","next_attempt_at"],name="outbox_pending_idx")]
+
+
+class AssetActivity(models.Model):
+    asset = models.ForeignKey(GymAsset,on_delete=models.PROTECT,related_name="activity")
+    actor = models.ForeignKey("auth.User",on_delete=models.PROTECT)
+    created_at = models.DateTimeField(auto_now_add=True)
+    before = models.JSONField(default=dict)
+    after = models.JSONField(default=dict)
+    description = models.TextField()
+
+    class Meta:
+        db_table = "asset_activity"
+        ordering = ["-created_at","-pk"]
+
+    def save(self,*args,**kwargs):
+        if not self._state.adding: raise ValidationError("Registra una nueva acción; historial inmutable.")
+        return super().save(*args,**kwargs)
+
+    def delete(self,*args,**kwargs):
+        raise ValidationError("Historial protegido.")

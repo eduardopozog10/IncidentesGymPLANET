@@ -170,11 +170,11 @@ class GymPlanetConversationTests(TestCase):
         self.assertIsNone(result["extracted_data"]["gym_asset_id"])
         self.assertFalse(result["incident_created"])
 
-    def test_ambiguous_asset_names_request_code(self):
+    def test_ambiguous_asset_names_keep_text_without_forced_link(self):
         self.inventory(code="TR-01")
         chosen = self.inventory(code="TR-02")
         result = self.complete_incident()
-        self.assertIn("catalog", result["missing_fields"])
+        self.assertNotIn("catalog", result["missing_fields"])
         result = self.send("TR-02")["processing"]
         self.assertEqual(result["extracted_data"]["gym_asset_id"], chosen.pk)
         self.assertFalse(Incident.objects.exists())

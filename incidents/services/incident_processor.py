@@ -683,6 +683,9 @@ class IncidentProcessor:
                     extraction.clarification_question
                 )
 
+        if not draft and not extracted_data.get("equipment"):
+            from incidents.services.gym_language import explicit_gym_equipment
+            extracted_data["equipment"] = explicit_gym_equipment(message.content)
         gym_context.enrich(extracted_data, self, draft)
         extracted_data["asset_category"] = (
             self._refine_asset_category_from_equipment(
@@ -2303,6 +2306,7 @@ class IncidentProcessor:
 
         if field_name == "area":
             valid_areas = {
+                "cardio", "musculacion", "peso libre", "camarines", "recepcion", "salas de clases",
                 "audio",
                 "produccion",
                 "operaciones",
