@@ -294,12 +294,6 @@ class IncidentSummaryView(APIView):
                     status=Incident.Status.REPORTED
                 ),
             ),
-            under_review=Count(
-                "id",
-                filter=Q(
-                    status=Incident.Status.UNDER_REVIEW
-                ),
-            ),
             in_progress=Count(
                 "id",
                 filter=Q(
@@ -355,9 +349,6 @@ class IncidentSummaryView(APIView):
                 "total": summary["total"],
                 "by_status": {
                     "reported": summary["reported"],
-                    "under_review": summary[
-                        "under_review"
-                    ],
                     "in_progress": summary[
                         "in_progress"
                     ],
@@ -389,7 +380,6 @@ class IncidentAnalyticsView(APIView):
 
         open_statuses = [
             Incident.Status.REPORTED,
-            Incident.Status.UNDER_REVIEW,
             Incident.Status.IN_PROGRESS,
         ]
 

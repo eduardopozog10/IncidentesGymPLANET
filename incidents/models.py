@@ -357,7 +357,6 @@ class Incident(models.Model):
 
     class Status(models.TextChoices):
         REPORTED = "reported", "Reportado"
-        UNDER_REVIEW = "under_review", "En revisión"
         IN_PROGRESS = "in_progress", "En atención"
         RESOLVED = "resolved", "Resuelto"
         CLOSED = "closed", "Cerrado"
@@ -487,6 +486,7 @@ class Incident(models.Model):
         verbose_name_plural = "incidentes"
         ordering = ["-created_at"]
         constraints = [
+            models.CheckConstraint(condition=models.Q(status__in=["reported","in_progress","resolved","closed","cancelled"]), name="incident_valid_status"),
             models.CheckConstraint(
                 condition=models.Q(branch_area__isnull=True) | models.Q(branch__isnull=False),
                 name="incident_area_requires_branch",
@@ -500,6 +500,10 @@ class Incident(models.Model):
             models.CheckConstraint(condition=models.Q(priority__in=["low", "medium", "high", "critical"]), name="incident_valid_priority"),
             models.CheckConstraint(condition=models.Q(report_type="request") | (~models.Q(equipment="") & ~models.Q(failure_type="")), name="incident_technical_fields"),
         ]
+
+    @transaction.atomic
+    def save(self, *args, **kwargs):
+        return super().save(*args, **kwargs)
 
     def clean(self):
         super().clean()
@@ -894,3 +898,20 @@ class ReportActivity(OperationalRecord):
 
     class Meta(OperationalRecord.Meta):
         db_table = "report_activity"
+
+
+class NotificationOutbox(models.Model):
+    report = models.OneToOneField(Incident, on_delete=models.PROTECT, related_name="creation_notification")
+    recipient = models.EmailField(blank=True)
+    payload = models.JSONField(default=dict)
+    status = models.CharField(max_length=12, default="pending", choices=[("pending","Pendiente"),("sending","En envío / revisar"),("sent","Enviado"),("failed","Fallido")])
+    attempts = models.PositiveIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    attempted_at = models.DateTimeField(null=True)
+    sent_at = models.DateTimeField(null=True)
+    next_attempt_at = models.DateTimeField(null=True)
+    last_error = models.CharField(max_length=160, blank=True)
+
+    class Meta:
+        db_table = "notification_outbox"
+        indexes = [models.Index(fields=["status","next_attempt_at"],name="outbox_pending_idx")]

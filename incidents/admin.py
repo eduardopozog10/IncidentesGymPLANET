@@ -413,3 +413,18 @@ class IncidentDraftAdmin(SecureModelAdmin):
     ordering = ("-updated_at",)
     date_hierarchy = "updated_at"
     list_per_page = 25
+
+
+from .models import NotificationOutbox
+
+
+@admin.register(NotificationOutbox)
+class NotificationOutboxAdmin(SecureModelAdmin):
+    list_display = ("report", "recipient", "status", "attempts", "attempted_at", "sent_at")
+    list_filter = ("status",)
+    search_fields = ("recipient", "report__description")
+    readonly_fields = tuple(field.name for field in NotificationOutbox._meta.fields)
+
+    def has_add_permission(self, request): return False
+    def has_change_permission(self, request, obj=None): return False
+    def has_delete_permission(self, request, obj=None): return False

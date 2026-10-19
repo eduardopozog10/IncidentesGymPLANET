@@ -1,5 +1,10 @@
 # IncidentesGymPLANET
 
+El [lote 9: estados y correo](docs/lot9-states-email.md) consolida cinco estados y
+una outbox durable. Revisar y autorizar 0021/0022 antes de usar esta versión con
+la principal; SMTP queda desactivado por defecto.
+
+
 El [lote 8: gestión operativa](docs/lot8-operations.md) incorpora el rol general,
 asignaciones, seguimiento e historial. Sus migraciones 0019/0020 están pendientes
 de autorización en la principal; revisar ese informe antes de iniciar esta versión.

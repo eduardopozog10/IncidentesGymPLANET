@@ -7,3 +7,5 @@ from incidents.models import Incident, ReportActivity
 def record_creation(sender, instance, created, raw=False, **kwargs):
     if created and not raw:
         ReportActivity.objects.create(report=instance, action="created", description="Reporte recibido.", after={"status":instance.status})
+        from incidents.services.incident_notification_service import queue_created_notification
+        queue_created_notification(instance)

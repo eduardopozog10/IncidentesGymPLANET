@@ -216,10 +216,10 @@ class IncidentAssetAndRequestTests(InventoryFixtures):
         self.assertEqual(incident.location_context, "Contexto histórico")
 
     def test_matching_asset_does_not_change_priority_or_status(self):
-        incident = self.incident(gym_asset=self.asset, priority="high", status="under_review")
+        incident = self.incident(gym_asset=self.asset, priority="high", status="in_progress")
         incident.full_clean()
         self.assertEqual(incident.priority, "high")
-        self.assertEqual(incident.status, "under_review")
+        self.assertEqual(incident.status, "in_progress")
 
     def test_cross_branch_asset_rejected_by_model_and_database(self):
         incident = Incident(**self.incident_values(gym_asset=self.other_asset))
@@ -508,7 +508,7 @@ class InventoryMigrationTests(TransactionTestCase):
             self.assertEqual(report.equipment, "Equipo antiguo")
             self.assertEqual(report.location_context, "Ubicación antigua")
             self.assertEqual(report.asset_category, "video_cameras")
-            self.assertEqual((report.priority, report.status, report.report_type), ("high", "under_review", "request"))
+            self.assertEqual((report.priority, report.status, report.report_type), ("high", "in_progress", "request"))
             self.assertIsNone(report.gym_asset_id)
             self.assertIsNone(report.request_category_id)
             for model in ("EquipmentCategory", "RequestCategory", "GymAsset", "MaintenanceRecord", "AssetMovement"):

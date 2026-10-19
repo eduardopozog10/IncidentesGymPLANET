@@ -305,7 +305,7 @@ class AccessSecurityTests(TestCase):
         self.incident.refresh_from_db()
         self.assertEqual(self.incident.status, "reported")
         self.client.force_login(self.superuser)
-        self.assertEqual(self.client.patch(url, {"status": "under_review"}, content_type="application/json").status_code, 200)
+        self.assertEqual(self.client.patch(url, {"status": "in_progress"}, content_type="application/json").status_code, 200)
 
     def test_dashboard_requires_authenticated_superuser(self):
         self.assertEqual(self.client.get(reverse("dashboard")).status_code, 302)

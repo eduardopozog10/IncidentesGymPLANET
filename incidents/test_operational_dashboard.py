@@ -139,7 +139,7 @@ class OperationalDashboardTests(TestCase):
         self.assertEqual(self.incident.status, "resolved")
         self.assertIsNotNone(self.incident.resolved_at)
         self.assertEqual((self.incident.description, self.incident.branch_id, self.incident.code_prefix), (before, self.branch.pk, "SC"))
-        self.client.post(url, {"status": "under_review", "reason":"Reabrir para revisión"})
+        self.client.post(url, {"status": "in_progress", "reason":"Reabrir para revisión"})
         self.incident.refresh_from_db()
         self.assertIsNone(self.incident.resolved_at)
 
@@ -155,7 +155,7 @@ class OperationalDashboardTests(TestCase):
         url = reverse("report-detail", args=[self.incident.pk])
         self.assertEqual(client.post(url, {"status": "resolved"}).status_code, 403)
         client.get(url)
-        self.assertEqual(client.post(url, {"status": "under_review"}, HTTP_X_CSRFTOKEN=client.cookies["csrftoken"].value).status_code, 302)
+        self.assertEqual(client.post(url, {"status": "in_progress"}, HTTP_X_CSRFTOKEN=client.cookies["csrftoken"].value).status_code, 302)
 
     def test_all_new_routes_require_superuser(self):
         urls = [reverse(name) for name in ("dashboard", "dashboard-incidents", "dashboard-requests", "dashboard-reports", "dashboard-branches", "dashboard-assets")]+[reverse("report-detail", args=[self.incident.pk])]

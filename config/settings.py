@@ -211,3 +211,11 @@ INCIDENT_NOTIFICATION_EMAIL = env(
 TELEGRAM_WEBHOOK_ENABLED = env.bool("TELEGRAM_WEBHOOK_ENABLED", default=False)
 TELEGRAM_WEBHOOK_SECRET = env("TELEGRAM_WEBHOOK_SECRET", default="")
 ENABLE_TEST_MESSAGE_ENDPOINT = DEBUG and env.bool("ENABLE_TEST_MESSAGE_ENDPOINT", default=False)
+
+
+# Outbox: activation is explicit; credentials remain private.
+EMAIL_NOTIFICATIONS_ENABLED = env.bool("EMAIL_NOTIFICATIONS_ENABLED", default=False)
+APP_BASE_URL = env("APP_BASE_URL", default="")
+EMAIL_TIMEOUT = env.int("EMAIL_TIMEOUT", default=20)
+EMAIL_USE_SSL = env.bool("EMAIL_USE_SSL", default=False)
+NOTIFICATION_MAX_ATTEMPTS = env.int("NOTIFICATION_MAX_ATTEMPTS", default=3)

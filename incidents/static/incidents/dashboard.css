@@ -656,7 +656,7 @@ summary {
   border-color:var(--positive-border);
   color:var(--positive-text)
 }
-.status-in_progress,.status-under_review {
+.status-in_progress {
   background:var(--info-bg);
   border-color:var(--info-border);
   color:var(--info-text)
@@ -1137,7 +1137,6 @@ td small {
 .sidebar nav>a[aria-current] {box-shadow:inset 3px 0 var(--brand-primary);}
 .priority-critical {background:var(--critical-bg);border-color:var(--critical-border);color:var(--critical-text);}
 .status-closed {background:var(--neutral-bg);border-color:var(--border-strong);color:var(--neutral-text);}
-.status-under_review {background:var(--warning-bg);border-color:var(--warning-border);color:var(--warning-text);}
 .status-in_progress {background:var(--working-bg);border-color:var(--working-border);color:var(--working-text);}
 .status-reported {background:var(--info-bg);border-color:var(--info-border);color:var(--info-text);}
 @media(max-width:760px) {

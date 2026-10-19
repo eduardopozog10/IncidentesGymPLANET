@@ -5,7 +5,7 @@ from django.db.models import Q
 
 from incidents.models import Branch, EquipmentCategory, GymAsset, Incident, RequestCategory
 
-OPEN_STATUSES = ("reported", "under_review", "in_progress")
+OPEN_STATUSES = ("reported", "in_progress")
 
 
 class ReportFilters(forms.Form):

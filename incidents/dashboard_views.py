@@ -54,7 +54,7 @@ class DashboardView(OperationalView):
             pending_requests=Count("pk", filter=Q(report_type="request", status__in=OPEN_STATUSES)),
             urgent=Count("pk", filter=Q(report_type="incident", priority__in=["high", "critical"], status__in=OPEN_STATUSES)),
         )
-        metrics.update(reported=reports.filter(status="reported").count(), review=reports.filter(status="under_review").count(), working=reports.filter(status="in_progress").count(), resolved=reports.filter(status="resolved").count(), closed=reports.filter(status="closed").count(), unassigned=reports.filter(reportassignments__isnull=True).count(), average_resolution=reports.filter(resolved_at__gte=F("created_at")).aggregate(value=Avg(F("resolved_at")-F("created_at")))["value"])
+        metrics.update(reported=reports.filter(status="reported").count(), cancelled=reports.filter(status="cancelled").count(), working=reports.filter(status="in_progress").count(), resolved=reports.filter(status="resolved").count(), closed=reports.filter(status="closed").count(), unassigned=reports.filter(reportassignments__isnull=True).count(), average_resolution=reports.filter(resolved_at__gte=F("created_at")).aggregate(value=Avg(F("resolved_at")-F("created_at")))["value"])
         metrics.update(active_branches=branches.filter(is_active=True).count(), unavailable_assets=assets.filter(operational_status="out_of_service", is_active=True).count())
         timeline = list(reports.annotate(day=TruncDate("created_at")).values("day").annotate(count=Count("pk")).order_by("day"))
         maximum = max((row["count"] for row in timeline), default=1)
@@ -63,7 +63,7 @@ class DashboardView(OperationalView):
         branch_rows = list(reports.values("branch_id", "branch__name", "branch__code").annotate(count=Count("pk")).order_by("-count", "branch_id"))
         branch_max = max((row["count"] for row in branch_rows), default=1)
         branch_distribution = [{"label": f"{row['branch__name']} ({row['branch__code']})" if row["branch_id"] else "Sin sucursal histórica", "count": row["count"], "width": round(row["count"] / branch_max * 100)} for row in branch_rows]
-        context.update(management_metrics=[("Reportados",metrics["reported"]),("En revisión",metrics["review"]),("En atención",metrics["working"]),("Resueltos",metrics["resolved"]),("Cerrados",metrics["closed"]),("Sin responsable (todos los estados)",metrics["unassigned"]),("Alta o crítica (todos los reportes)",reports.filter(priority__in=["high","critical"]).count())], filters=filters, metrics=metrics, recent=reports.order_by("-updated_at", "-pk")[:5],
+        context.update(management_metrics=[("Reportados",metrics["reported"]),("Cancelados",metrics["cancelled"]),("En atención",metrics["working"]),("Resueltos",metrics["resolved"]),("Cerrados",metrics["closed"]),("Sin responsable (todos los estados)",metrics["unassigned"]),("Alta o crítica (todos los reportes)",reports.filter(priority__in=["high","critical"]).count())], filters=filters, metrics=metrics, recent=reports.order_by("-updated_at", "-pk")[:5],
                        latest_incidents=reports.filter(report_type="incident").order_by("-created_at", "-pk")[:4],
                        latest_requests=reports.filter(report_type="request").order_by("-created_at", "-pk")[:4],
                        by_branch=branch_distribution,
@@ -89,10 +89,24 @@ class ReportListView(OperationalView):
 
 
 class StatusForm(forms.Form):
-    solution = forms.CharField(label="Solución aplicada (obligatoria al resolver)", required=False, widget=forms.Textarea, max_length=4000)
-    reason = forms.CharField(label="Motivo u observación (opcional)", required=False, max_length=4000)
+    status = forms.ChoiceField(
+        label="Estado del reporte",
+        choices=Incident.Status.choices,
+    )
 
-    status = forms.ChoiceField(label="Estado del reporte", choices=Incident.Status.choices)
+    solution = forms.CharField(
+        label="Solución aplicada (obligatoria al resolver)",
+        required=False,
+        max_length=4000,
+        widget=forms.Textarea(attrs={"rows": 3}),
+    )
+
+    reason = forms.CharField(
+        label="Motivo de cancelación u observación (obligatorio al cancelar)",
+        required=False,
+        max_length=4000,
+        widget=forms.Textarea(attrs={"rows": 3}),
+    )
 
 
 class ReportDetailView(OperationalView):

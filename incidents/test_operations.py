@@ -31,7 +31,7 @@ class OperationsTests(TestCase):
         return manage_report(self.report.pk,self.manager,action,**data)
 
     def resolve(self):
-        for status in ("under_review","in_progress"):
+        for status in ("in_progress",):
             self.act("status",status=status)
         return self.act("status",status="resolved",solution="Se reparó el equipo.")
 
@@ -88,7 +88,7 @@ class OperationsTests(TestCase):
         report=self.act("status",status="closed")
         self.assertEqual(report.resolved_at,resolved)
         self.assertEqual(ReportActivity.objects.filter(action="solution").count(),1)
-        report=self.act("status",status="under_review",reason="Se repitió la falla")
+        report=self.act("status",status="in_progress",reason="Se repitió la falla")
         self.assertIsNone(report.resolved_at)
         self.assertTrue(ReportActivity.objects.filter(action="reopened").exists())
 
@@ -98,15 +98,15 @@ class OperationsTests(TestCase):
         self.assertEqual(ReportActivity.objects.count(),count)
 
     def test_solution_required(self):
-        self.act("status",status="under_review")
+        self.act("status",status="in_progress")
         self.act("status",status="in_progress")
         with self.assertRaises(ValidationError): self.act("status",status="resolved",solution=" ")
         self.assertFalse(ReportActivity.objects.filter(action="solution").exists())
 
     def test_reopen_does_not_require_reason(self):
         self.resolve()
-        report=self.act("status",status="under_review")
-        self.assertEqual(report.status,"under_review")
+        report=self.act("status",status="in_progress")
+        self.assertEqual(report.status,"in_progress")
         self.assertIsNone(report.resolved_at)
 
     def test_comment_author_and_escaped_display(self):
@@ -162,7 +162,7 @@ class OperationsTests(TestCase):
     def test_manager_can_update_api_with_same_rules(self):
         url=f"/api/v1/incidents/{self.report.pk}/"
         self.assertEqual(self.client.patch(url,{"status":"closed"},content_type="application/json").status_code,200)
-        self.assertEqual(self.client.patch(url,{"status":"under_review"},content_type="application/json").status_code,200)
+        self.assertEqual(self.client.patch(url,{"status":"in_progress"},content_type="application/json").status_code,200)
         self.assertEqual(ReportActivity.objects.filter(action="reopened").get().actor,self.manager)
 
     def test_staff_without_role_cannot_read_api(self):
@@ -176,14 +176,14 @@ class OperationsTests(TestCase):
         self.assertFalse(ReportActivity.objects.filter(action="solution").exists())
 
     def test_all_five_states_are_free_for_both_report_types(self):
-        states=["reported","under_review","in_progress","resolved","closed"]
+        states=["reported","in_progress","resolved","closed","cancelled"]
         for kind in ("incident","request"):
             for source in states:
                 for target in states:
                     with self.subTest(kind=kind,source=source,target=target):
                         report=Incident.objects.create(technician=self.reporter,report_type=kind,equipment="Equipo",failure_type="Falla",description="Prueba",priority="low",status=source)
                         count=report.reportactivitys.count()
-                        result=manage_report(report.pk,self.manager,"status",status=target,solution="Solución explícita")
+                        result=manage_report(report.pk,self.manager,"status",status=target,solution="Solución explícita",reason="Motivo de prueba")
                         self.assertEqual(result.status,target)
                         events=report.reportactivitys.exclude(action="created")
                         if source==target:
@@ -191,7 +191,7 @@ class OperationsTests(TestCase):
                         else:
                             change=events.exclude(action="solution").get()
                             self.assertEqual(change.before,{"status":source})
-                            self.assertEqual(change.after,{"status":target})
+                            self.assertEqual(change.after,{"status":target,"reason":"Motivo de prueba"})
                             self.assertEqual(change.actor,self.manager)
                             self.assertIsNotNone(change.created_at)
 

@@ -2615,7 +2615,7 @@ class IncidentDetailViewTests(TestCase):
 
 
     def test_updates_incident_status(self):
-        self.incident.status = "under_review"
+        self.incident.status = "reported"
         self.incident.save()
 
         response = self.client.patch(
@@ -2782,7 +2782,7 @@ class IncidentDetailViewTests(TestCase):
 
             data={
 
-                "status": Incident.Status.UNDER_REVIEW,
+                "status": Incident.Status.IN_PROGRESS,
                 "reason": "Reapertura de prueba",
 
             },
@@ -2811,7 +2811,7 @@ class IncidentDetailViewTests(TestCase):
 
             self.incident.status,
 
-            Incident.Status.UNDER_REVIEW,
+            Incident.Status.IN_PROGRESS,
 
         )
 
@@ -2924,7 +2924,7 @@ class IncidentSummaryViewTests(TestCase):
 
             priority=Incident.Priority.LOW,
 
-            status=Incident.Status.UNDER_REVIEW,
+            status=Incident.Status.IN_PROGRESS,
 
             original_message="El router no tiene conexión.",
 
@@ -3022,7 +3022,7 @@ class IncidentSummaryViewTests(TestCase):
 
         self.assertEqual(
 
-            data["by_status"]["under_review"],
+            data["by_status"]["in_progress"],
 
             1,
 
@@ -3030,7 +3030,7 @@ class IncidentSummaryViewTests(TestCase):
 
         self.assertEqual(
 
-            data["by_status"]["in_progress"],
+            data["by_status"]["cancelled"],
 
             0,
 
@@ -3134,7 +3134,7 @@ class IncidentAnalyticsViewTests(TestCase):
             ),
             operational_impact="Permite continuar operando",
             priority=Incident.Priority.MEDIUM,
-            status=Incident.Status.UNDER_REVIEW,
+            status=Incident.Status.IN_PROGRESS,
             original_message=(
                 "Área Redes, el switch principal de Control Central "
                 "pierde conexión de forma intermitente."

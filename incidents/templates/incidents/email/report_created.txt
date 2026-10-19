@@ -1,0 +1,12 @@
+{% autoescape off %}Gym Planet Reportes
+{{ report.code }} · {{ report.kind }}
+{% if report.branch %}Sucursal: {{ report.branch }}{% endif %}
+{% if report.area %}Área: {{ report.area }}{% endif %}
+{% if report.equipment %}Equipo o requerimiento: {{ report.equipment }}{% endif %}
+Descripción: {{ report.description }}
+Prioridad: {{ report.priority }}
+Estado: {{ report.status }}
+Fecha: {{ report.created }}
+Ver reporte: {{ url }}
+Se requiere iniciar sesión con una cuenta autorizada.
+{% endautoescape %}

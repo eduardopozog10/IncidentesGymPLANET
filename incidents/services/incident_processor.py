@@ -19,9 +19,7 @@ from incidents.models import (
 from incidents.services.gymplanet_conversation import GymPlanetContext, WELCOME, finish, normalize, process_request
 from incidents.services.corporate_identity import authorized_branch
 from incidents.services.incident_draft_service import IncidentDraftService
-from incidents.services.incident_notification_service import (
-    send_incident_created_email,
-)
+
 
 
 class IncidentProcessor:
@@ -1677,14 +1675,6 @@ class IncidentProcessor:
             ]
         )
 
-        transaction.on_commit(
-            lambda incident_id=incident.pk: (
-                send_incident_created_email(
-                    incident_id
-                )
-            ),
-            robust=True,
-        )
 
         return {
             "action": "incident_created",

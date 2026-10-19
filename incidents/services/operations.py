@@ -49,7 +49,11 @@ def manage_report(pk, actor, action, **data):
             report.resolved_at = timezone.now()
         elif target != "closed":
             report.resolved_at = None
-        reason = text(data.get("reason"),4000)
+        reason = text(
+            data.get("reason"),
+            4000,
+            required=(target == "cancelled"),
+        )
         if reason:
             after["reason"] = reason
         report.status = target
