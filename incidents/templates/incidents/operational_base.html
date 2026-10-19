@@ -73,8 +73,7 @@
 </div>
 {% if request.user.is_superuser %}<a href="{% url 'admin:index' %}">Administración Django <span aria-hidden="true">↗</span>
 </a>{% endif %}
-</div>
-<form method="post" action="{% url 'operations-logout' %}">{% csrf_token %}<button class="button compact">Cerrar sesión</button></form></aside>
+<form method="post" action="{% url 'operations-logout' %}">{% csrf_token %}<button class="button compact">Cerrar sesión</button></form></div></aside>
 <div class="workspace">
 <header class="topbar">
 <span>Operaciones <span class="slash">/</span> <strong>{{ page_title }}</strong>

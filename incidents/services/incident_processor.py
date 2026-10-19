@@ -311,7 +311,8 @@ class IncidentProcessor:
                 draft.status = IncidentDraft.Status.COLLECTING
                 draft.save(update_fields=["extracted_data", "status", "updated_at"])
             return finish(message, action="branch_mismatch", draft=draft, reply=context.branch_issue or "Confirma el nombre o código de la sucursal autorizada de esta cuenta para resolver la discrepancia.")
-        if draft and context.authorized_mention and draft.extracted_data.get("_branch_conflict"):
+        recovered_branch = bool(draft and context.authorized_mention and draft.extracted_data.get("_branch_conflict"))
+        if recovered_branch:
             draft.extracted_data.pop("_branch_conflict")
             draft.save(update_fields=["extracted_data", "updated_at"])
         if draft and draft.extracted_data.get("branch_id") != branch.pk:
@@ -321,6 +322,9 @@ class IncidentProcessor:
         controlled = handle_controls(self, message, draft, context)
         if controlled is not None:
             return controlled
+        if recovered_branch:
+            from incidents.services.conversation_controls import resummarize
+            return resummarize(self, message, draft, context, {})
         quick = self._get_quick_conversation_reply(context.parse_text)
         if quick is not None:
             return finish(message, action="conversation", draft=draft, reply=quick)
@@ -398,6 +402,7 @@ class IncidentProcessor:
                 "reply": quick_reply,
             }
 
+        had_draft = draft is not None
         raw_previous_data = (
             dict(draft.extracted_data or {})
             if draft
@@ -744,7 +749,7 @@ class IncidentProcessor:
         if equipment_was_generic:
             clarification_question = (
                 "Necesito identificar con mayor precisión "
-                f"qué {str(generic_equipment).lower()} está afectada. "
+                f"el equipo o servicio afectado ({str(generic_equipment).lower()}). "
                 "Indica su número, nombre o identificador. "
                 "Si no lo conoces, describe cómo reconocer el equipo sin inventar un código."
             )
@@ -814,7 +819,7 @@ class IncidentProcessor:
             )
 
         acknowledgment = ""
-        if (correction_mode or self._looks_like_natural_correction_statement(message.content)) and not gym_context.catalog_issue:
+        if had_draft and (correction_mode or self._looks_like_natural_correction_statement(message.content)) and not gym_context.catalog_issue:
             labels = {"equipment": "el equipo", "area": "el área", "location_context": "la ubicación", "failure_type": "el síntoma", "description": "la descripción", "operational_impact": "el impacto operacional", "priority": "la prioridad"}
             changed = [field for field in labels if extracted_data.get(field) and extracted_data.get(field) != previous_data.get(field) and field not in missing_fields]
             if changed:
@@ -2157,7 +2162,7 @@ class IncidentProcessor:
             )
         )
 
-        if expected_field is None:
+        if expected_field is None or (not draft.missing_fields and not is_correction_mode):
             return None
 
         if (
@@ -2538,6 +2543,7 @@ class IncidentProcessor:
         )
 
         generic_equipment_values = {
+            "maquina", "una maquina", "la maquina", "equipo", "un equipo", "el equipo", "aparato",
             "camara",
             "microfono",
             "monitor",

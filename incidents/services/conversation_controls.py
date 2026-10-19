@@ -33,7 +33,7 @@ def resummarize(processor, message, draft, context, changes, acknowledgment=None
     before = dict(draft.extracted_data)
     data = dict(before)
     data.update(changes)
-    for key in ("_pending_change", "_target_field", "_pending_messages"):
+    for key in ("_pending_change", "_target_field", "_pending_messages", "_request_correction", "_request_target"):
         data.pop(key, None)
     context.previous = dict(data)
     context.enrich(data, processor, draft)
@@ -65,9 +65,11 @@ def handle_controls(processor, message, draft, context):
         if normalized in processor.CONFIRMATION_NEGATIVE:
             return resummarize(processor, message, draft, context, {})
         return finish(message, draft=draft, reply="¿Quieres corregir ese dato? Responde Sí para revisarlo o No para conservar el anterior. Después revisarás el resumen antes de guardar.")
-    if re.search(r"\b(?:nuev[oa] (?:reporte|incidencia|solicitud)|otra (?:incidencia|solicitud))\b", normalized) or (
-        report_type(normalized) != previous.get("report_type", "incident") and re.search(r"\b(?:solicito|necesitamos|nos faltan|es una incidencia|es una solicitud)\b", normalized)
-    ):
+    correcting = bool(re.search(r"\b(?:me equivoque|corrige|corregir|correccion|cantidad correcta|prioridad correcta)\b", normalized))
+    previous_kind = previous.get("report_type", "incident")
+    switching = re.search(r"\b(?:es una incidencia|es una solicitud|tipo incidencia|tipo solicitud)\b", normalized) and report_type(normalized) != previous_kind
+    new_request = previous_kind == "incident" and report_type(normalized) == "request" and re.search(r"\b(?:solicito|necesitamos|nos faltan)\b", normalized)
+    if re.search(r"\b(?:nuev[oa] (?:reporte|incidencia|solicitud)|otra (?:incidencia|solicitud))\b", normalized) or ((switching or new_request) and not correcting):
         return finish(message, action="pending_report", draft=draft, reply="Hay un reporte pendiente. Puedes continuar o corregirlo, o usar /cancelar antes de iniciar otro. Conservaré sus datos sin mezclar reportes.")
     if normalized in {"repite", "repite la pregunta", "repetir", "no entendi la pregunta"}:
         return finish(message, draft=draft, reply=draft.last_question or "Cuéntame el dato que quieres completar.")
@@ -85,6 +87,19 @@ def handle_controls(processor, message, draft, context):
         draft.save(update_fields=["extracted_data", "status", "last_question", "updated_at"])
         return finish(message, draft=draft, reply=draft.last_question)
     choice = priority_choice(text)
+    quantity = re.search(r"(?:me equivoqu[eé](?: en la cantidad)?|corrige la cantidad|la cantidad correcta(?: es)?)[,;:]?\s*(?:necesitamos|necesito|eran?|son)?\s*(\d+)\s+(.+?)(?=\s+y\s+(?:la\s+)?prioridad\b|[,;.!?]|$)", text, re.I)
+    if quantity and previous.get("report_type") == "request":
+        item = quantity[2].strip()
+        pattern = r"\b(?:\d+|un[oa]?|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez)\s+" + re.escape(item) + r"\b"
+        replacement, count = re.subn(pattern, lambda _: quantity[1]+" "+item, previous.get("description") or "", flags=re.I)
+        if count != 1:
+            return finish(message, draft=draft, reply="Indica la descripción completa corregida para evitar cambiar una cantidad equivocada.")
+        changes = {"description": replacement}
+        notice = "Entendido, actualicé la cantidad de la solicitud."
+        if choice:
+            changes.update(priority=choice, _priority_explicit=True)
+            notice = "Entendido, actualicé la cantidad y la prioridad de la solicitud."
+        return resummarize(processor, message, draft, context, changes, acknowledgment=notice)
     if choice and ("prioridad" in normalized or normalized in {"baja", "media", "alta", "critica", "low", "medium", "high", "critical"}):
         return resummarize(processor, message, draft, context, {"priority": choice, "_priority_explicit": True})
     equipment = re.search(r"\bno (?:era|es) .+?[,;]?\s+(?:era|es)\s+(.+)", text, re.I)
@@ -97,14 +112,6 @@ def handle_controls(processor, message, draft, context):
         if old:
             changes["description"] = replace_equipment(previous.get("description") or "", old, value)
         return resummarize(processor, message, draft, context, changes)
-    quantity = re.search(r"(?:me equivoqu[eé]|corrige la cantidad)[,;:]?\s*(?:eran?|son)?\s*(\d+)\s+([\wáéíóúñ]+)", text, re.I)
-    if quantity and previous.get("report_type") == "request":
-        description = previous.get("description") or ""
-        pattern = r"\b(?:\d+|un[oa]?|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez)\s+" + re.escape(quantity[2]) + r"\b"
-        replacement, count = re.subn(pattern, lambda _: quantity[1]+" "+quantity[2], description, flags=re.I)
-        if count == 1:
-            return resummarize(processor, message, draft, context, {"description": replacement}, acknowledgment="Entendido, actualicé la cantidad de la solicitud.")
-        return finish(message, draft=draft, reply="Indica la descripción completa corregida para evitar cambiar una cantidad equivocada.")
     if re.search(r"\bno (?:esta|quedo|se encuentra) fuera de servicio\b", normalized):
         return resummarize(processor, message, draft, context, {"operational_impact": text})
     observed = failure(text)

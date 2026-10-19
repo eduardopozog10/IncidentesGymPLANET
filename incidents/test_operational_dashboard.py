@@ -78,7 +78,7 @@ class OperationalDashboardTests(TestCase):
 
     def test_incident_list_excludes_requests(self):
         response = self.client.get(reverse("dashboard-incidents"))
-        self.assertEqual({r.pk for r in response.context["page_obj"]}, {self.incident.pk, self.other_incident.pk})
+        self.assertEqual({r.pk for r in response.context["page_obj"]}, {self.incident.pk})
         self.assertNotContains(response, self.request.code)
 
     def test_request_list_excludes_technical_columns(self):

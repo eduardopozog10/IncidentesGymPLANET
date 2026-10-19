@@ -13,17 +13,17 @@
 </div>
 <div>
 <dt>Área y ubicación</dt>
-<dd>{{ report.branch_area.name|default:report.area|default:'No informada' }}{% if report.location_context %} · {{ report.location_context }}{% endif %}</dd>
+<dd>{{ display_area }}{% if display_location and display_location != display_area %} · {{ display_location }}{% endif %}</dd>
 </div>{% if report.report_type == 'request' %}<div>
 <dt>Tipo de solicitud</dt>
-<dd>{{ report.request_kind|default:'No informado' }}</dd>
+<dd class="display-name">{{ report.request_kind|default:'No informado' }}</dd>
 </div>
 <div>
 <dt>Categoría</dt>
 <dd>{{ report.request_category.name|default:'Sin categoría registrada' }}</dd>
 </div>{% else %}<div>
 <dt>Equipo o instalación</dt>
-<dd>{{ report.equipment }}</dd>
+<dd class="display-name">{{ report.equipment }}</dd>
 </div>
 <div>
 <dt>Falla o síntoma</dt>

@@ -510,10 +510,12 @@ Contrato:
   branch no otorga autorización; devuelve null si no hay una mención literal.
 - area/location_context: Musculación, Cardio, Peso libre, Camarines, Recepción,
   salas de clases u otra ubicación explícita. No supongas que exista un área registrada.
+  No deduzcas un área por el tipo de máquina: si no se mencionó y no estaba en el borrador, devuelve null.
 - equipment: equipo o instalación descritos. No inventes códigos, series, marcas o modelos.
 - failure_type: síntoma observable; no diagnostiques causas ni inventes averías.
 - description: descripción objetiva de lo ocurrido o solicitado.
 - operational_impact: justificación o efecto informado; no infieras riesgos no mencionados.
+  Conserva las acciones expresas de retiro de uso, suspensión o aislamiento; no las reduzcas únicamente al riesgo.
 - request_kind: tipo de requerimiento explícito, por ejemplo reposición, compra o aseo.
 - request_category: nombre/código de categoría mencionado; nunca generes IDs de registros.
 - unit y asset_category son campos heredados: conserva valores anteriores si existen.

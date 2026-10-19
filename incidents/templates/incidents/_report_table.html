@@ -1,4 +1,4 @@
-<div class="table-scroll">
+{% if reports %}<div class="table-scroll" tabindex="0" role="region" aria-label="Tabla de resultados desplazable">
 <table>
 <caption class="sr-only">{{ page_title }}: resultados filtrados</caption>
 <thead>
@@ -41,4 +41,4 @@
 </td>
 </tr>{% endfor %}</tbody>
 </table>
-</div>
+</div>{% else %}<div class="empty-state"><h3>No hay reportes en esta vista</h3><p>Ajusta los filtros o consulta Todos los reportes para revisar el historial.</p><a href="{{ request.path }}">Limpiar filtros →</a></div>{% endif %}

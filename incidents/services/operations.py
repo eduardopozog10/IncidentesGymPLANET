@@ -14,10 +14,12 @@ def authorize(user):
         raise PermissionDenied("Acceso operativo no autorizado.")
 
 
-def text(value, limit, required=False):
+def text(value, limit, required=False, label="Dato"):
     value = str(value or "").strip()
-    if (required and not value) or len(value) > limit:
-        raise ValidationError("Completa el dato requerido respetando el largo máximo.")
+    if required and not value:
+        raise ValidationError(f"{label}: este campo es obligatorio.")
+    if len(value) > limit:
+        raise ValidationError(f"{label}: admite como máximo {limit} caracteres.")
     return value
 
 
@@ -29,7 +31,7 @@ def manage_report(pk, actor, action, **data):
     if action == "assign":
         previous = report.reportassignments.first()
         before = {key:getattr(previous,key) for key in ("responsible","person_name","notes")} if previous else {}
-        after = dict(responsible=text(data.get("responsible"),200,True), person_name=text(data.get("person_name"),200), notes=text(data.get("notes"),4000))
+        after = dict(responsible=text(data.get("responsible"),200,True,"Responsable / oficio"), person_name=text(data.get("person_name"),200,label="Nombre"), notes=text(data.get("notes"),4000,label="Observaciones"))
         ReportAssignment.objects.create(report=report,actor=actor,**after)
         action = "reassigned" if previous else "assigned"
         description = "Responsable: " + after["responsible"] + (" — " + after["person_name"] if after["person_name"] else "")
@@ -49,7 +51,7 @@ def manage_report(pk, actor, action, **data):
         ReportActivity.objects.create(report=report,actor=actor,action="asset_link",before=before,after=after,description="Asociación de activo actualizada")
         return report
     elif action == "comment":
-        description = text(data.get("comment"),4000,True)
+        description = text(data.get("comment"),4000,True,"Comentario")
     elif action == "status":
         target = data.get("status")
         if target not in Incident.Status.values:
@@ -59,7 +61,7 @@ def manage_report(pk, actor, action, **data):
         before = {"status":report.status}
         after = {"status":target}
         if target == "resolved":
-            solution = text(data.get("solution"),4000,True)
+            solution = text(data.get("solution"),4000,True,"Solución aplicada")
             ReportActivity.objects.create(report=report,actor=actor,action="solution",description=solution)
             report.resolved_at = timezone.now()
         elif target != "closed":
@@ -68,6 +70,7 @@ def manage_report(pk, actor, action, **data):
             data.get("reason"),
             4000,
             required=(target == "cancelled"),
+            label="Motivo de cancelación u observación",
         )
         if reason:
             after["reason"] = reason

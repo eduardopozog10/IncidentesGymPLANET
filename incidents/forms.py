@@ -79,6 +79,7 @@ class AssetOperationalForm(GymAssetAdminForm):
     class Meta:
         model = GymAsset
         fields = ["code","name","category","branch","branch_area","brand","model","serial_number","description","operational_status","is_active","acquired_on","next_maintenance_at","notes"]
+        help_texts = {"next_maintenance_at": "Opcional. Déjalo vacío si no hay mantenimiento programado.", "acquired_on": "Opcional. Indica solo una fecha conocida."}
         widgets = {"acquired_on":forms.DateInput(format="%Y-%m-%d",attrs={"type":"date"}), "next_maintenance_at":forms.DateTimeInput(format="%Y-%m-%dT%H:%M",attrs={"type":"datetime-local"}), "description":forms.Textarea(attrs={"rows":3}), "notes":forms.Textarea(attrs={"rows":3})}
 
 

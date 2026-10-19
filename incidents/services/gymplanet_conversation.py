@@ -2,6 +2,7 @@
 import re
 import unicodedata
 from incidents.services.gym_language import failure, request_intent, priority_choice, availability
+from incidents.services.conversation_evidence import ground_locations, retain_operational_state, request_reason, retain_request_materials
 
 from django.utils import timezone
 
@@ -116,6 +117,10 @@ class GymPlanetContext:
         return "¿A qué sucursal corresponde? Indica nombre o código: " + ", ".join(f"{b.name} ({b.code})" for b in self.active)
 
     def enrich(self, data, processor, draft=None):
+        scoped_areas = list(BranchArea.objects.filter(branch=self.branch)) if self.branch else []
+        ground_locations(data, self.previous, self.parse_text, scoped_areas)
+        if self.kind == "incident":
+            retain_operational_state(data, self.parse_text)
         if self.previous.get("_free_asset"):
             data["_free_asset"] = True
         data["operational_impact"] = data.get("operational_impact") or availability(self.parse_text) or explicit_operational_impact(self.parse_text)
@@ -152,8 +157,8 @@ class GymPlanetContext:
         if not self.branch:
             return data
         # Match only facts supplied in text, or text retained in the draft.
-        scoped_areas = BranchArea.objects.filter(branch=self.branch)
-        areas = matches(scoped_areas, self.parse_text) or matches(scoped_areas, data.get("area"))
+        named_areas = [area for area in scoped_areas if re.search(r"\b"+re.escape(normalize(area.name))+r"\b", normalize(self.parse_text))]
+        areas = named_areas or matches(scoped_areas, self.parse_text) or matches(scoped_areas, data.get("area"))
         if len(areas) == 1 and areas[0].is_active:
             data["branch_area_id"] = areas[0].pk
             data["area"] = f"{areas[0].name} ({areas[0].code})"
@@ -206,6 +211,8 @@ class GymPlanetContext:
             return self.branch_issue or self.branch_question()
         if self.catalog_issue:
             return self.catalog_issue
+        if self.kind == "request" and missing and missing[0] == "operational_impact":
+            return "¿Por qué se necesita o qué impacto tiene lo solicitado en la operación de la sede?"
         if missing and missing[0] == "operational_impact" and (fallback or "").startswith("¿Qué impacto operacional") :
             return "¿Qué impacto tiene: sigue disponible para los socios o quedó fuera de servicio? Por ejemplo, pueden seguir entrenando."
         return fallback
@@ -259,7 +266,11 @@ def process_request(processor, message, draft, context, initial_extraction=None)
     if corrected:
         data[correction[0]] = correction[1]
         data.pop("_request_target", None)
-    elif direct and waiting != "priority" and "prioridad" not in normalized:
+    elif direct and waiting != "priority" and "prioridad" not in normalized and (
+        target or (waiting == "request_kind" and request_kind(text) and len(normalized.split()) <= 5)
+        or (waiting == "operational_impact" and request_reason(text))
+        or waiting == "description"
+    ):
         data[waiting] = text
         data.pop("_request_target", None)
     elif text and normalized not in processor.CONFIRMATION_POSITIVE:
@@ -274,13 +285,20 @@ def process_request(processor, message, draft, context, initial_extraction=None)
             return processor._handle_ai_error(message, draft, previous, processor._get_pending_messages(previous))
         for field in ("area", "location_context", "description", "operational_impact", "request_kind"):
             candidate = getattr(extraction, field, None)
+            if field == "operational_impact" and not request_reason(text):
+                continue
             if candidate and not data.get(field):
                 data[field] = candidate
         data.pop(processor.PENDING_MESSAGES_KEY, None)
+    if normalize(data.get("request_kind")) in {"solicitud", "solicitud operativa", "requerimiento", "peticion", "pedido"}:
+        data["request_kind"] = None
     data["request_kind"] = data.get("request_kind") or request_kind(text)
+    if not data.get("request_kind") and re.search(r"\b(?:necesito|necesitamos|solicito|requiero)\s+\d+\s+\w+", normalized):
+        data["request_kind"] = "Materiales e implementos"
     # The original solicitation itself is a factual description, not an invented failure.
     if not data.get("description") and text and report_type(text) == "request":
         data["description"] = text
+    retain_request_materials(data, text)
     context.enrich(data, processor, draft)
     if data.get("_request_target") == "priority" and data.get("_priority_explicit"):
         data.pop("_request_target", None)

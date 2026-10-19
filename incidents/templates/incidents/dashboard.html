@@ -1,56 +1,31 @@
-{% extends 'incidents/operational_base.html' %}{% block subtitle %}Una mirada clara a tus sucursales, equipos y prioridades.{% endblock %}{% block content %}{% include 'incidents/_filters.html' %}
-<section class="metric-grid" aria-label="Gestión">{% for label, value in management_metrics %}<article class="metric"><span>{{ label }}</span><strong>{{ value }}</strong></article>{% endfor %}<article class="metric"><span>Promedio hasta resolución</span><strong>{{ metrics.average_resolution|default:'Sin fechas suficientes' }}</strong></article></section>
-<section class="metric-grid" aria-label="Indicadores operativos">
-<article class="metric accent">
-<div class="metric-label">Total de reportes <svg aria-hidden="true">
-<use href="#list"/>
-</svg>
-</div>
-<strong>{{ metrics.total }}</strong>
-<span>En el período seleccionado</span>
-</article>
-<article class="metric">
-<div class="metric-label">Incidencias abiertas <svg aria-hidden="true">
-<use href="#bolt"/>
-</svg>
-</div>
-<strong>{{ metrics.open_incidents }}</strong>
-<span>Reportadas o en atención</span>
-</article>
-<article class="metric">
-<div class="metric-label">Solicitudes pendientes <svg aria-hidden="true">
-<use href="#list"/>
-</svg>
-</div>
-<strong>{{ metrics.pending_requests }}</strong>
-<span>Necesidades por resolver</span>
-</article>
-<article class="metric">
-<div class="metric-label">Alta o crítica <span class="tiny-dot coral">
-</span>
-</div>
-<strong>{{ metrics.urgent }}</strong>
-<span>Incidencias abiertas prioritarias</span>
-</article>
-<article class="metric">
-<div class="metric-label">Sucursales activas <svg aria-hidden="true">
-<use href="#pin"/>
-</svg>
-</div>
-<strong>{{ metrics.active_branches }}</strong>
-<span>Estado actual de las sedes seleccionadas</span>
-</article>
-<article class="metric">
-<div class="metric-label">Equipos fuera de servicio <svg aria-hidden="true">
-<use href="#asset"/>
-</svg>
-</div>
-<strong>{{ metrics.unavailable_assets }}</strong>
-<span>Estado actual del inventario activo</span>
-</article>
+{% extends 'incidents/operational_base.html' %}
+{% block subtitle %}Lo que requiere atención hoy, con acceso al historial completo.{% endblock %}
+{% block content %}{% include 'incidents/_filters.html' %}
+<p class="context-note">Los reportes respetan los filtros actuales. Los equipos muestran su estado actual en la sucursal seleccionada.</p>
+<section class="metric-grid operational-kpis" aria-label="Indicadores operativos">
+<article class="metric accent"><div class="metric-label">Incidencias abiertas</div><strong>{{ metrics.open_incidents }}</strong><span>Reportadas o en atención</span></article>
+<article class="metric"><div class="metric-label">Solicitudes pendientes</div><strong>{{ metrics.pending_requests }}</strong><span>Reportadas o en atención</span></article>
+<article class="metric"><div class="metric-label">Incidencias altas o críticas abiertas</div><strong>{{ metrics.urgent }}</strong><span>Parte de las incidencias abiertas</span></article>
+<article class="metric"><div class="metric-label">Equipos fuera de servicio</div><strong>{{ metrics.unavailable_assets }}</strong><span>Inventario activo · Estado actual</span></article>
 </section>
-<div class="control-grid">
-<section class="panel evolution">
+<div class="two-columns operational-summary">
+<section class="panel"><div class="panel-heading"><h2>Reportes por revisar</h2><a href="{% url 'dashboard-reports' %}">Ver historial ↗</a></div><p class="muted">Pendientes por prioridad y antigüedad.</p>{% for report in review_reports %}{% include 'incidents/_review_report.html' %}{% empty %}<p class="empty-inline">No hay reportes pendientes en esta selección.</p>{% endfor %}</section>
+<section class="panel"><div class="panel-heading"><h2>Pendientes por sucursal</h2></div>
+{% for row in pending_by_branch %}<div class="branch-pending"><span>{{ row.branch__name|default:'Sin sucursal histórica' }}{% if row.branch__code %} <small>({{ row.branch__code }})</small>{% endif %}</span><strong>{{ row.count }}</strong></div>{% empty %}<p class="empty-inline">Sin pendientes en las sucursales seleccionadas.</p>{% endfor %}</section>
+</div>
+<div class="two-columns">
+<section class="panel">
+<div class="panel-heading">
+<h2>Incidencias pendientes recientes</h2>
+<a href="{% url 'dashboard-incidents' %}{% querystring %}">Ver pendientes ↗</a>
+</div>{% for report in latest_incidents %}{% include 'incidents/_recent.html' %}{% empty %}<p class="empty-inline">Sin incidencias en la selección actual.</p>{% endfor %}</section>
+<section class="panel">
+<div class="panel-heading">
+<h2>Solicitudes pendientes recientes</h2>
+<a href="{% url 'dashboard-requests' %}{% querystring %}">Ver pendientes ↗</a>
+</div>{% for report in latest_requests %}{% include 'incidents/_recent.html' %}{% empty %}<p class="empty-inline">Sin solicitudes en la selección actual.</p>{% endfor %}</section>
+</div>
+<details class="panel secondary-overview"><summary>Evolución de reportes · incluye estados finalizados según los filtros</summary><section class="panel evolution">
 <div class="panel-heading">
 <div>
 <p class="eyebrow">PULSO DE LA OPERACIÓN</p>
@@ -73,50 +48,4 @@
 <h3>Tu operación, día a día</h3>
 <p>La evolución aparecerá cuando existan reportes en este período.</p>
 </div>{% endif %}</section>
-<section class="panel">
-<div class="panel-heading">
-<div>
-<p class="eyebrow">EN TODA LA RED</p>
-<h2>Reportes por sucursal</h2>
-</div>
-<svg class="panel-icon" aria-hidden="true">
-<use href="#pin"/>
-</svg>
-</div>{% include 'incidents/_distribution.html' with rows=by_branch %}</section>
-<section class="panel">
-<div class="panel-heading">
-<h2>Distribución por prioridad</h2>
-</div>{% include 'incidents/_distribution.html' with rows=by_priority %}</section>
-<section class="panel">
-<div class="panel-heading">
-<h2>Estado de los reportes</h2>
-</div>{% include 'incidents/_distribution.html' with rows=by_status %}</section>
-</div>
-<div class="two-columns">
-<section class="panel">
-<div class="panel-heading">
-<h2>Últimas incidencias</h2>
-<a href="{% url 'dashboard-incidents' %}{% querystring %}">Ver todas ↗</a>
-</div>{% for report in latest_incidents %}{% include 'incidents/_recent.html' %}{% empty %}<p class="empty-inline">Sin incidencias en la selección actual.</p>{% endfor %}</section>
-<section class="panel">
-<div class="panel-heading">
-<h2>Últimas solicitudes</h2>
-<a href="{% url 'dashboard-requests' %}{% querystring %}">Ver todas ↗</a>
-</div>{% for report in latest_requests %}{% include 'incidents/_recent.html' %}{% empty %}<p class="empty-inline">Sin solicitudes en la selección actual.</p>{% endfor %}</section>
-</div>
-<section class="panel activity">
-<div class="panel-heading">
-<div>
-<p class="eyebrow">LO MÁS RECIENTE</p>
-<h2>Actividad de reportes</h2>
-</div>
-<span class="muted">Última actualización de cada reporte</span>
-</div>{% for report in recent %}<a class="activity-row" href="{% url 'report-detail' report.pk %}">
-<span class="activity-mark" aria-hidden="true">↗</span>
-<span>
-<strong>{{ report.code }} · {{ report.get_report_type_display }}</strong>
-<small>{{ report.branch.name|default:'Sin sucursal histórica' }} · {{ report.description|truncatechars:90 }}</small>
-</span>
-<span class="badge status-{{ report.status }}">{{ report.get_status_display }}</span>
-<time>{{ report.updated_at|date:'d M · H:i' }}</time>
-</a>{% empty %}<p class="empty-inline">La actividad aparecerá cuando se registren reportes.</p>{% endfor %}</section>{% endblock %}
+</details>{% endblock %}

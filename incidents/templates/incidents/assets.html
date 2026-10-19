@@ -1,9 +1,9 @@
-{% extends 'incidents/operational_base.html' %}{% block subtitle %}Disponibilidad e historial del equipamiento de tus gimnasios.{% endblock %}{% block content %}<p><a class="button primary" href="{% url 'asset-create' %}">Registrar activo</a> <a class="button" href="{% url 'asset-categories' %}">Categorías</a> <a class="button" href="{% url 'maintenance-dashboard' %}">Mantenimiento y recurrencia</a></p>{% include 'incidents/_filters.html' %}<section class="panel table-panel">
+{% extends 'incidents/operational_base.html' %}{% block subtitle %}Disponibilidad e historial del equipamiento de tus gimnasios.{% endblock %}{% block content %}{% include 'incidents/_inventory_nav.html' with inventory_page='list' %}{% include 'incidents/_filters.html' %}<section class="panel table-panel">
 <div class="panel-heading">
 <h2>Inventario registrado</h2>
 <span class="chip">{{ page_obj.paginator.count }} activo{{ page_obj.paginator.count|pluralize }}</span>
 </div>
-<div class="table-scroll">
+{% if page_obj %}<div class="table-scroll" tabindex="0" role="region" aria-label="Tabla de resultados desplazable">
 <table>
 <caption class="sr-only">Equipos y activos registrados</caption>
 <thead>
@@ -48,4 +48,4 @@
 </td>
 </tr>{% endfor %}</tbody>
 </table>
-</div>{% include 'incidents/_pagination.html' %}</section>{% endblock %}
+</div>{% else %}<div class="empty-state"><h3>Un lugar para cada equipo</h3><p>Registra un activo o ajusta los filtros para consultar el inventario.</p></div>{% endif %}{% include 'incidents/_pagination.html' %}</section>{% endblock %}

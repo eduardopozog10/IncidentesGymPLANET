@@ -2,7 +2,7 @@ from django import forms
 from django.contrib import messages
 from django.contrib.auth.mixins import UserPassesTestMixin
 from django.core.paginator import Paginator
-from django.db.models import Count, Q, Avg, F, Max, Min, Prefetch
+from django.db.models import Count, Q, Avg, F, Max, Min, Prefetch, Case, When, IntegerField
 from django.db.models.functions import TruncDate
 from django.http import HttpResponseRedirect
 from django.shortcuts import get_object_or_404
@@ -69,6 +69,13 @@ class DashboardView(OperationalView):
                        by_branch=branch_distribution,
                        by_priority=distribution(reports, "priority", dict(Incident.Priority.choices)),
                        by_status=distribution(reports, "status", dict(Incident.Status.choices)), timeline=timeline)
+        pending = reports.filter(status__in=OPEN_STATUSES)
+        context.update(
+            pending_by_branch=list(pending.values("branch_id", "branch__name", "branch__code").annotate(count=Count("pk")).order_by("-count", "branch_id")),
+            review_reports=pending.annotate(urgency=Case(When(priority="critical", then=0), When(priority="high", then=1), When(priority="medium", then=2), default=3, output_field=IntegerField())).order_by("urgency", "created_at", "pk")[:5],
+            latest_incidents=pending.filter(report_type="incident").order_by("-created_at", "-pk")[:4],
+            latest_requests=pending.filter(report_type="request").order_by("-created_at", "-pk")[:4],
+        )
         return context
 
 
@@ -81,14 +88,21 @@ class ReportListView(OperationalView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         filters = ReportFilters(self.request.GET)
+        if self.report_type:
+            filters.fields["status"].choices = [("", "Todos los pendientes")] + [
+                choice for choice in Incident.Status.choices if choice[0] in OPEN_STATUSES
+            ]
         reports = filters.apply(Incident.objects.select_related("branch", "branch_area", "technician", "request_category"))
         if self.report_type:
-            reports = reports.filter(report_type=self.report_type)
-        context.update(filters=filters, report_type=self.report_type, page_obj=Paginator(reports.order_by("-created_at", "-pk"), 20).get_page(self.request.GET.get("page")))
+            reports = reports.filter(report_type=self.report_type, status__in=OPEN_STATUSES)
+        context.update(pending_count=reports.count() if self.report_type else None, filters=filters, report_type=self.report_type, page_obj=Paginator(reports.order_by("-created_at", "-pk"), 20).get_page(self.request.GET.get("page")))
         return context
 
 
 class StatusForm(forms.Form):
+    def __init__(self, *args, current_status=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.current_status = current_status
     status = forms.ChoiceField(
         label="Estado del reporte",
         choices=Incident.Status.choices,
@@ -108,6 +122,13 @@ class StatusForm(forms.Form):
         widget=forms.Textarea(attrs={"rows": 3}),
     )
 
+    def clean(self):
+        data = super().clean()
+        required = {"resolved": "solution", "cancelled": "reason"}.get(data.get("status"))
+        if required and data.get("status") != self.current_status and not data.get(required) and required not in self.errors:
+            self.add_error(required, "Registra la solución aplicada." if required == "solution" else "Indica el motivo de cancelación.")
+        return data
+
 
 class ReportDetailView(OperationalView):
     template_name = "incidents/report_detail.html"
@@ -117,15 +138,18 @@ class ReportDetailView(OperationalView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         report = get_object_or_404(Incident.objects.select_related("branch", "branch_area", "technician", "gym_asset", "request_category").prefetch_related("maintenance_records__asset"), pk=self.kwargs["pk"])
-        context.update(asset_choices=GymAsset.objects.filter(branch_id=report.branch_id,is_active=True).select_related("branch"), assignment=report.reportassignments.select_related("actor").first(), activity=Paginator(report.reportactivitys.select_related("actor").all(), 30).get_page(self.request.GET.get("activity_page")), report=report, status_form=kwargs.get("status_form") or StatusForm(initial={"status": report.status}))
+        area = report.branch_area.name if report.branch_area_id else report.area
+        location = report.location_context
+        same_location = " ".join((area or "").split()).casefold() == " ".join((location or "").split()).casefold()
+        context.update(display_location=location if not same_location else "", display_area=area or location or "No informada", asset_choices=GymAsset.objects.filter(branch_id=report.branch_id,is_active=True).select_related("branch"), assignment=report.reportassignments.select_related("actor").first(), activity=Paginator(report.reportactivitys.select_related("actor").all(), 30).get_page(self.request.GET.get("activity_page")), report=report, status_form=kwargs.get("status_form") or StatusForm(initial={"status": report.status}))
         return context
 
     def post(self, request, *args, **kwargs):
-        get_object_or_404(Incident, pk=self.kwargs["pk"])
+        report = get_object_or_404(Incident, pk=self.kwargs["pk"])
         action = request.POST.get("action", "status")
         try:
             if action == "status":
-                form = StatusForm(request.POST)
+                form = StatusForm(request.POST, current_status=report.status)
                 if not form.is_valid():
                     return self.render_to_response(self.get_context_data(status_form=form), status=400)
                 manage_report(self.kwargs["pk"], request.user, "status", **form.cleaned_data)

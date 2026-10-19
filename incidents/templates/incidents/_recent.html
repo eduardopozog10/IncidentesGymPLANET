@@ -3,7 +3,7 @@
 <span class="report-code">{{ report.code }}</span>
 <span class="badge priority-{{ report.priority }}">{{ report.get_priority_display }}</span>
 </div>
-<strong>{{ report.equipment|default:report.request_kind|default:'Solicitud operativa' }}</strong>
+<strong class="display-name">{% if report.report_type == 'request' %}{{ report.request_kind|default:'Solicitud operativa' }}{% else %}{{ report.equipment }}{% endif %}</strong>
 <p>{{ report.description|truncatechars:100 }}</p>
 <small>{{ report.branch.name|default:'Sin sucursal histórica' }} <span aria-hidden="true">·</span> {{ report.created_at|date:'d M, H:i' }}</small>
 </a>

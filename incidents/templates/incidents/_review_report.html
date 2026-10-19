@@ -1,0 +1,6 @@
+<a class="review-report" href="{% url 'report-detail' report.pk %}">
+<strong>{{ report.code }} · {{ report.get_report_type_display }}</strong>
+<span class="badge priority-{{ report.priority }}">{{ report.get_priority_display }}</span>
+<span class="review-description">{{ report.description|truncatechars:100 }}</span>
+<small>{{ report.branch.name|default:'Sin sucursal histórica' }} · {{ report.created_at|date:'d/m/Y H:i' }}</small>
+</a>

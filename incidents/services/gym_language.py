@@ -34,7 +34,7 @@ def priority_choice(text):
     choices = {"baja": "low", "media": "medium", "alta": "high", "critica": "critical", "low": "low", "medium": "medium", "high": "high", "critical": "critical"}
     if text.strip(" .!") in choices:
         return choices[text.strip(" .!")]
-    pattern = r"\bprioridad\s*(?:es|era|seria|:)?\s*(baja|media|alta|critica|low|medium|high|critical)\b"
+    pattern = r"\bprioridad\s*(?:(?:correcta|definitiva|elegida)\s*)?(?:(?:es|era|seria)\s*(?:la\s+)?|:\s*)?(baja|media|alta|critica|low|medium|high|critical)\b"
     candidates = []
     for match in re.finditer(pattern, text):
         if re.search(r"\b(?:no|sin)\s+(?:(?:es|era|sea|confirmo|quiero)\s+)?$", text[:match.start()]):

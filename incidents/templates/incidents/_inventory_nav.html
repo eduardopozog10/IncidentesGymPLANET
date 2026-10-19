@@ -1,0 +1,6 @@
+<nav class="inventory-nav" aria-label="Gestión de inventario">
+<a class="button" href="{% url 'dashboard-assets' %}" {% if inventory_page == 'list' %}aria-current="page"{% endif %}>Inventario</a>
+<a class="button {% if inventory_page == 'create' %}primary{% endif %}" href="{% url 'asset-create' %}" {% if inventory_page == 'create' %}aria-current="page"{% endif %}>Registrar activo</a>
+<a class="button" href="{% url 'asset-categories' %}" {% if inventory_page == 'categories' %}aria-current="page"{% endif %}>Categorías</a>
+<a class="button" href="{% url 'maintenance-dashboard' %}" {% if inventory_page == 'maintenance' %}aria-current="page"{% endif %}>Mantenimiento y recurrencia</a>
+</nav>
