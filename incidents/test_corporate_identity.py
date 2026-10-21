@@ -256,7 +256,7 @@ class CorporateIdentityTests(TestCase):
         self.assertFalse(IncidentDraft.objects.exists())
 
     def test_requests_use_authorized_branch_without_technical_fields(self):
-        result = self.send("Solicito reponer toallas, impide entrenar, prioridad media")["processing"]
+        result = self.send("Solicito reponer 3 toallas, impide entrenar, prioridad media")["processing"]
         self.assertEqual(result["missing_fields"], [])
         self.send("Sí")
         report = Incident.objects.get()

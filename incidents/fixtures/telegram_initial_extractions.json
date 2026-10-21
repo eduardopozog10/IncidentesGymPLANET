@@ -1,0 +1,576 @@
+{
+  "level": "C fixture: minimum synthetic inputs and recorded initial extractions; no private account IDs, credentials or chat history",
+  "cases": [
+    {
+      "id": "QA-TG-001",
+      "initial_message": "La trotadora del área de Cardio se detiene mientras un socio corre. Dejamos de utilizarla porque puede provocar una caída. Prioridad alta.",
+      "report_type": "incident",
+      "expected": {
+        "priority": "high"
+      },
+      "planned_complements": []
+    },
+    {
+      "id": "QA-TG-002",
+      "initial_message": "La bicicleta estática de Cardio hace un ruido metálico al pedalear. La retiramos de uso y hay una máquina menos disponible para los socios. Prioridad media.",
+      "report_type": "incident",
+      "expected": {
+        "priority": "medium"
+      },
+      "planned_complements": []
+    },
+    {
+      "id": "QA-TG-003",
+      "initial_message": "En Musculación, el cable de la polea alta está deshilachado. Hay riesgo de que se corte y lesione a un socio; el equipo está aislado y no se puede usar. Prioridad crítica.",
+      "report_type": "incident",
+      "expected": {
+        "priority": "critical"
+      },
+      "planned_complements": []
+    },
+    {
+      "id": "QA-TG-004",
+      "initial_message": "La máquina de prensa de Musculación tiene una pieza suelta en el apoyo. Está fuera de servicio para evitar accidentes y los socios no pueden entrenar ahí. Prioridad alta.",
+      "report_type": "incident",
+      "expected": {
+        "priority": "high"
+      },
+      "planned_complements": []
+    },
+    {
+      "id": "QA-TG-005",
+      "initial_message": "La máquina de remo de Cardio pierde resistencia de manera intermitente. Suspendimos su uso y se redujo la disponibilidad de equipos para entrenar. Prioridad media.",
+      "report_type": "incident",
+      "expected": {
+        "priority": "medium"
+      },
+      "planned_complements": []
+    },
+    {
+      "id": "QA-TG-006",
+      "initial_message": "La trotadora de código GP-TROT-01 en Cardio no enciende. Está fuera de servicio y los socios no pueden utilizarla. Prioridad alta.",
+      "report_type": "incident",
+      "expected": {
+        "priority": "high"
+      },
+      "planned_complements": []
+    },
+    {
+      "id": "QA-TG-007",
+      "initial_message": "En Cardio hay una máquina que no enciende. Está fuera de servicio y los socios no pueden utilizarla. Prioridad media.",
+      "report_type": "incident",
+      "expected": {
+        "priority": "medium"
+      },
+      "planned_complements": []
+    },
+    {
+      "id": "QA-TG-008",
+      "initial_message": "Quiero reportar una incidencia en la sucursal Quilín. Una trotadora presenta una falla en la pantalla, que no enciende. Está fuera de servicio y no puede utilizarse. Prioridad baja.",
+      "report_type": "incident",
+      "expected": {
+        "priority": "low"
+      },
+      "planned_complements": [
+        "Cardio"
+      ]
+    },
+    {
+      "id": "QA-TG-009",
+      "initial_message": "Una de las dos bicicletas estáticas de Cardio hace un golpeteo al pedalear; no sé su código. Está fuera de servicio y no se puede utilizar. Prioridad media.",
+      "report_type": "incident",
+      "expected": {
+        "priority": "medium"
+      },
+      "planned_complements": []
+    },
+    {
+      "id": "QA-TG-010",
+      "initial_message": "Un rack de sentadillas en Musculación está inestable y se mueve con la carga. Aislamos el equipo por riesgo de caída de las pesas y nadie puede usarlo. Prioridad crítica.",
+      "report_type": "incident",
+      "expected": {
+        "priority": "critical"
+      },
+      "planned_complements": []
+    },
+    {
+      "id": "QA-TG-011",
+      "initial_message": "Hay una fuga de agua en la ducha de los camarines. El piso está mojado y cerramos esa ducha para evitar caídas. Prioridad alta.",
+      "report_type": "incident",
+      "expected": {
+        "priority": "high"
+      },
+      "planned_complements": []
+    },
+    {
+      "id": "QA-TG-012",
+      "initial_message": "El aire acondicionado de la sala de clases grupales no funciona. Suspendimos las clases por falta de ventilación. Prioridad alta.",
+      "report_type": "incident",
+      "expected": {
+        "priority": "high"
+      },
+      "planned_complements": []
+    },
+    {
+      "id": "QA-TG-013",
+      "initial_message": "En Musculación los enchufes de la pared producen chispas. Aislamos la zona y no se pueden usar esas máquinas por riesgo eléctrico. Prioridad crítica.",
+      "report_type": "incident",
+      "expected": {
+        "priority": "critical"
+      },
+      "planned_complements": []
+    },
+    {
+      "id": "QA-TG-014",
+      "initial_message": "El torniquete de Recepción no desbloquea al validar el acceso. Debemos dejar pasar a los socios manualmente y se forman filas. Prioridad alta.",
+      "report_type": "incident",
+      "expected": {
+        "priority": "high"
+      },
+      "planned_complements": []
+    },
+    {
+      "id": "QA-TG-015",
+      "initial_message": "El computador de Recepción no tiene internet y el sistema administrativo quedó sin conexión. No podemos registrar ingresos ni nuevas inscripciones. Prioridad alta.",
+      "report_type": "incident",
+      "expected": {
+        "priority": "high"
+      },
+      "planned_complements": [
+        "Es el computador del mesón de inscripciones de Recepción."
+      ]
+    },
+    {
+      "id": "QA-TG-016",
+      "initial_message": "Necesitamos reponer 8 colchonetas para clases grupales. Las actuales están rotas y faltan implementos para las clases. Prioridad media.",
+      "report_type": "request",
+      "expected": {
+        "priority": "medium"
+      },
+      "planned_complements": []
+    },
+    {
+      "id": "QA-TG-017",
+      "initial_message": "Solicito 5 litros de desinfectante y 3 paquetes de paños para los camarines. El stock se está agotando y debemos mantener la limpieza diaria. Prioridad alta.",
+      "report_type": "request",
+      "expected": {
+        "priority": "high"
+      },
+      "planned_complements": []
+    },
+    {
+      "id": "QA-TG-018",
+      "initial_message": "Solicito comprar 4 bandas elásticas para Musculación. No hay suficientes para los entrenamientos guiados. Prioridad baja.",
+      "report_type": "request",
+      "expected": {
+        "priority": "low"
+      },
+      "planned_complements": []
+    },
+    {
+      "id": "QA-TG-019",
+      "initial_message": "Solicito una revisión preventiva de las bicicletas estáticas de Cardio. Funcionan bien; queremos revisar su desgaste para prevenir fallas. Prioridad baja.",
+      "report_type": "request",
+      "expected": {
+        "priority": "low"
+      },
+      "planned_complements": []
+    },
+    {
+      "id": "QA-TG-020",
+      "initial_message": "Necesitamos 12 mancuernas de 5 kg para Musculación. Se necesitan para las clases guiadas y hoy compartimos muy pocas entre los socios. Prioridad media.",
+      "report_type": "request",
+      "expected": {
+        "priority": "medium"
+      },
+      "planned_complements": [
+        "MUSCULACION"
+      ]
+    },
+    {
+      "id": "QA-TG-021",
+      "initial_message": "Solicito 6 colchonetas para clases grupales porque varias están deterioradas y no alcanzan para los socios. Prioridad media.",
+      "report_type": "request",
+      "expected": {
+        "priority": "medium"
+      },
+      "planned_complements": [
+        "Me equivoqué en la cantidad: necesitamos 10 colchonetas, no 6."
+      ]
+    },
+    {
+      "id": "QA-TG-022",
+      "initial_message": "Necesitamos insumos de limpieza.",
+      "report_type": "request",
+      "expected": {
+        "priority": null
+      },
+      "planned_complements": [
+        "Son 2 bidones de detergente para los camarines.",
+        "Se acabó el stock y no podemos completar la limpieza diaria.",
+        "Prioridad alta."
+      ]
+    },
+    {
+      "id": "QA-TG-023",
+      "initial_message": "La trotadora 3 del área de Cardio de Quilín no enciende y está fuera de servicio. Los socios no pueden utilizarla. Prioridad alta.",
+      "report_type": "incident",
+      "expected": {
+        "priority": "high"
+      },
+      "planned_complements": []
+    },
+    {
+      "id": "QA-TG-024",
+      "initial_message": "Quiero hacer una solicitud para clases grupales.",
+      "report_type": "request",
+      "expected": {
+        "priority": null
+      },
+      "planned_complements": [
+        "Necesitamos 7 bloques de yoga.",
+        "Hay bloques rotos y no alcanzan para completar la clase.",
+        "Prioridad media."
+      ]
+    },
+    {
+      "id": "QA-TG-025",
+      "initial_message": "En Cardio, una elíptica no enciende y está fuera de servicio, así que los socios no la pueden usar. Prioridad media.",
+      "report_type": "incident",
+      "expected": {
+        "priority": "medium"
+      },
+      "planned_complements": [
+        "Me equivoqué, la sucursal correcta es Peñalolén.",
+        "Mantengo el reporte en mi sucursal autorizada de Quilín.",
+        "Prioridad media"
+      ]
+    },
+    {
+      "id": "QA-TG-026",
+      "initial_message": "En Cardio una trotadora no enciende. Está fuera de servicio y no se puede usar. Prioridad baja.",
+      "report_type": "incident",
+      "expected": {
+        "priority": "low"
+      },
+      "planned_complements": [
+        "No era una trotadora, era una bicicleta estática.",
+        "La prioridad correcta es alta, no baja."
+      ]
+    },
+    {
+      "id": "QA-TG-027",
+      "initial_message": "La trotadra de cardio ta mala, la pantaya no prende. La dejamos fuera de servicio pq los socios no la pueden ocupar. Prioridad alta, porfa.",
+      "report_type": "incident",
+      "expected": {
+        "priority": "high"
+      },
+      "planned_complements": []
+    },
+    {
+      "id": "QA-TG-028",
+      "initial_message": "Solicito 3 dispensadores de jabón para los camarines porque hay pocos disponibles y se dificulta el lavado de manos.",
+      "report_type": "request",
+      "expected": {
+        "priority": null
+      },
+      "planned_complements": [
+        "Mmm, no sé, tú ve qué te parece.",
+        "La prioridad es media."
+      ]
+    },
+    {
+      "id": "QA-TG-029",
+      "initial_message": "Solicito 4 balones medicinales para Musculación. Faltan para el entrenamiento guiado. Prioridad media.",
+      "report_type": "request",
+      "expected": {
+        "priority": "medium"
+      },
+      "planned_complements": [
+        "No",
+        "La cantidad correcta es 5 balones medicinales y la prioridad es alta."
+      ]
+    },
+    {
+      "id": "QA-TG-030",
+      "initial_message": "Solicito 2 escobillones para los camarines. Los que tenemos están deteriorados y dificultan la limpieza. Prioridad baja.",
+      "report_type": "request",
+      "expected": {
+        "priority": "low"
+      },
+      "planned_complements": []
+    }
+  ],
+  "exchanges": [
+    {
+      "case_id": "QA-TG-001",
+      "input": "La trotadora del área de Cardio se detiene mientras un socio corre. Dejamos de utilizarla porque puede provocar una caída. Prioridad alta.",
+      "gemini_calls": [
+        {
+          "output": "{\n  \"intent\": \"incident_report\",\n  \"conversation_reply\": null,\n  \"unit\": null,\n  \"area\": \"Cardio\",\n  \"location_context\": \"Cardio\",\n  \"asset_category\": null,\n  \"equipment\": \"Trotadora\",\n  \"failure_type\": \"se detiene mientras un socio corre\",\n  \"description\": \"La trotadora se detiene inesperadamente durante su uso.\",\n  \"operational_impact\": \"puede provocar una caída\",\n  \"priority\": \"high\",\n  \"clarification_question\": null,\n  \"branch\": \"Quilín\",\n  \"report_type\": \"incident\",\n  \"request_category\": null,\n  \"request_kind\": null\n}"
+        }
+      ]
+    },
+    {
+      "case_id": "QA-TG-002",
+      "input": "La bicicleta estática de Cardio hace un ruido metálico al pedalear. La retiramos de uso y hay una máquina menos disponible para los socios. Prioridad media.",
+      "gemini_calls": [
+        {
+          "output": "{\n  \"intent\": \"incident_report\",\n  \"conversation_reply\": null,\n  \"unit\": null,\n  \"area\": \"Cardio\",\n  \"location_context\": \"Cardio\",\n  \"asset_category\": null,\n  \"equipment\": \"bicicleta estática\",\n  \"failure_type\": \"ruido metálico al pedalear\",\n  \"description\": \"La bicicleta estática de Cardio hace un ruido metálico al pedalear. Fue retirada de uso.\",\n  \"operational_impact\": \"Hay una máquina menos disponible para los socios.\",\n  \"priority\": \"medium\",\n  \"clarification_question\": null,\n  \"branch\": \"Quilín\",\n  \"report_type\": \"incident\",\n  \"request_category\": null,\n  \"request_kind\": null\n}"
+        }
+      ]
+    },
+    {
+      "case_id": "QA-TG-003",
+      "input": "En Musculación, el cable de la polea alta está deshilachado. Hay riesgo de que se corte y lesione a un socio; el equipo está aislado y no se puede usar. Prioridad crítica.",
+      "gemini_calls": [
+        {
+          "output": "{\n  \"intent\": \"incident_report\",\n  \"conversation_reply\": null,\n  \"unit\": null,\n  \"area\": \"Musculación\",\n  \"location_context\": \"Musculación\",\n  \"asset_category\": null,\n  \"equipment\": \"polea alta\",\n  \"failure_type\": \"cable deshilachado\",\n  \"description\": \"El cable de la polea alta está deshilachado.\",\n  \"operational_impact\": \"Hay riesgo de que se corte y lesione a un socio; el equipo está aislado y no se puede usar.\",\n  \"priority\": \"critical\",\n  \"clarification_question\": null,\n  \"branch\": \"Quilín\",\n  \"report_type\": \"incident\",\n  \"request_category\": null,\n  \"request_kind\": null\n}"
+        }
+      ]
+    },
+    {
+      "case_id": "QA-TG-004",
+      "input": "La máquina de prensa de Musculación tiene una pieza suelta en el apoyo. Está fuera de servicio para evitar accidentes y los socios no pueden entrenar ahí. Prioridad alta.",
+      "gemini_calls": [
+        {
+          "output": "{\n  \"intent\": \"incident_report\",\n  \"conversation_reply\": null,\n  \"unit\": null,\n  \"area\": \"Musculación\",\n  \"location_context\": \"Musculación\",\n  \"asset_category\": null,\n  \"equipment\": \"prensa\",\n  \"failure_type\": \"pieza suelta en el apoyo\",\n  \"description\": \"La máquina de prensa tiene una pieza suelta en el apoyo. Está fuera de servicio para evitar accidentes.\",\n  \"operational_impact\": \"los socios no pueden entrenar ahí\",\n  \"priority\": \"Alta\",\n  \"clarification_question\": null,\n  \"branch\": \"Quilín\",\n  \"report_type\": \"incident\",\n  \"request_category\": null,\n  \"request_kind\": null\n}"
+        }
+      ]
+    },
+    {
+      "case_id": "QA-TG-005",
+      "input": "La máquina de remo de Cardio pierde resistencia de manera intermitente. Suspendimos su uso y se redujo la disponibilidad de equipos para entrenar. Prioridad media.",
+      "gemini_calls": [
+        {
+          "output": "{\n  \"intent\": \"incident_report\",\n  \"conversation_reply\": null,\n  \"unit\": null,\n  \"area\": \"Cardio\",\n  \"location_context\": \"Cardio\",\n  \"asset_category\": null,\n  \"equipment\": \"máquina de remo\",\n  \"failure_type\": \"pierde resistencia de manera intermitente\",\n  \"description\": \"La máquina de remo pierde resistencia de manera intermitente.\",\n  \"operational_impact\": \"Se suspendió su uso y se redujo la disponibilidad de equipos para entrenar.\",\n  \"priority\": \"medium\",\n  \"clarification_question\": null,\n  \"branch\": \"Quilín\",\n  \"report_type\": \"incident\",\n  \"request_category\": null,\n  \"request_kind\": null\n}"
+        }
+      ]
+    },
+    {
+      "case_id": "QA-TG-006",
+      "input": "La trotadora de código GP-TROT-01 en Cardio no enciende. Está fuera de servicio y los socios no pueden utilizarla. Prioridad alta.",
+      "gemini_calls": [
+        {
+          "output": "{\n  \"intent\": \"incident_report\",\n  \"conversation_reply\": null,\n  \"unit\": null,\n  \"area\": \"Cardio\",\n  \"location_context\": \"Cardio\",\n  \"asset_category\": null,\n  \"equipment\": \"trotadora\",\n  \"failure_type\": \"no enciende\",\n  \"description\": \"La trotadora en la zona de Cardio no enciende, está fuera de servicio.\",\n  \"operational_impact\": \"los socios no pueden utilizarla\",\n  \"priority\": \"high\",\n  \"clarification_question\": null,\n  \"branch\": \"Quilín\",\n  \"report_type\": \"incident\",\n  \"request_category\": null,\n  \"request_kind\": null\n}"
+        }
+      ]
+    },
+    {
+      "case_id": "QA-TG-007",
+      "input": "En Cardio hay una máquina que no enciende. Está fuera de servicio y los socios no pueden utilizarla. Prioridad media.",
+      "gemini_calls": [
+        {
+          "output": "{\n  \"intent\": \"incident_report\",\n  \"conversation_reply\": null,\n  \"unit\": null,\n  \"area\": \"Cardio\",\n  \"location_context\": \"Cardio\",\n  \"asset_category\": null,\n  \"equipment\": \"máquina\",\n  \"failure_type\": \"no enciende\",\n  \"description\": \"Una máquina en Cardio no enciende y se encuentra fuera de servicio.\",\n  \"operational_impact\": \"los socios no pueden utilizarla\",\n  \"priority\": \"Media\",\n  \"clarification_question\": null,\n  \"branch\": \"Quilín\",\n  \"report_type\": \"incident\",\n  \"request_category\": null,\n  \"request_kind\": null\n}"
+        }
+      ]
+    },
+    {
+      "case_id": "QA-TG-008",
+      "input": "Quiero reportar una incidencia en la sucursal Quilín. Una trotadora presenta una falla en la pantalla, que no enciende. Está fuera de servicio y no puede utilizarse. Prioridad baja.",
+      "gemini_calls": [
+        {
+          "output": "{\n  \"intent\": \"incident_report\",\n  \"conversation_reply\": null,\n  \"unit\": null,\n  \"area\": \"Cardio\",\n  \"location_context\": \"Cardio\",\n  \"asset_category\": null,\n  \"equipment\": \"trotadora\",\n  \"failure_type\": \"pantalla no enciende\",\n  \"description\": \"Una trotadora presenta una falla en la pantalla, que no enciende. Está fuera de servicio y no puede utilizarse.\",\n  \"operational_impact\": \"no puede utilizarse\",\n  \"priority\": \"low\",\n  \"clarification_question\": null,\n  \"branch\": \"Quilín\",\n  \"report_type\": \"incident\",\n  \"request_category\": null,\n  \"request_kind\": null\n}"
+        }
+      ]
+    },
+    {
+      "case_id": "QA-TG-009",
+      "input": "Una de las dos bicicletas estáticas de Cardio hace un golpeteo al pedalear; no sé su código. Está fuera de servicio y no se puede utilizar. Prioridad media.",
+      "gemini_calls": [
+        {
+          "output": "{\n  \"intent\": \"incident_report\",\n  \"conversation_reply\": null,\n  \"unit\": null,\n  \"area\": \"Cardio\",\n  \"location_context\": \"Cardio\",\n  \"asset_category\": null,\n  \"equipment\": \"bicicleta estática\",\n  \"failure_type\": \"golpeteo al pedalear\",\n  \"description\": \"Una de las dos bicicletas estáticas de Cardio hace un golpeteo al pedalear. Está fuera de servicio y no se puede utilizar.\",\n  \"operational_impact\": \"no se puede utilizar\",\n  \"priority\": \"medium\",\n  \"clarification_question\": null,\n  \"branch\": null,\n  \"report_type\": \"incident\",\n  \"request_category\": null,\n  \"request_kind\": null\n}"
+        }
+      ]
+    },
+    {
+      "case_id": "QA-TG-010",
+      "input": "Un rack de sentadillas en Musculación está inestable y se mueve con la carga. Aislamos el equipo por riesgo de caída de las pesas y nadie puede usarlo. Prioridad crítica.",
+      "gemini_calls": [
+        {
+          "output": "{\n  \"intent\": \"incident_report\",\n  \"conversation_reply\": null,\n  \"unit\": null,\n  \"area\": \"Musculación\",\n  \"location_context\": \"Musculación\",\n  \"asset_category\": null,\n  \"equipment\": \"rack de sentadillas\",\n  \"failure_type\": \"inestable y se mueve con la carga\",\n  \"description\": \"El rack de sentadillas presenta inestabilidad al ser utilizado con carga, lo que ha llevado a aislar el equipo.\",\n  \"operational_impact\": \"Nadie puede usar el equipo debido al riesgo de caída de las pesas.\",\n  \"priority\": \"critical\",\n  \"clarification_question\": null,\n  \"branch\": \"Quilín\",\n  \"report_type\": \"incident\",\n  \"request_category\": null,\n  \"request_kind\": null\n}"
+        }
+      ]
+    },
+    {
+      "case_id": "QA-TG-011",
+      "input": "Hay una fuga de agua en la ducha de los camarines. El piso está mojado y cerramos esa ducha para evitar caídas. Prioridad alta.",
+      "gemini_calls": [
+        {
+          "output": "{\n  \"intent\": \"incident_report\",\n  \"conversation_reply\": null,\n  \"unit\": null,\n  \"area\": \"Camarines\",\n  \"location_context\": \"Camarines\",\n  \"asset_category\": null,\n  \"equipment\": \"ducha\",\n  \"failure_type\": \"fuga de agua\",\n  \"description\": \"Hay una fuga de agua en la ducha de los camarines. El piso está mojado.\",\n  \"operational_impact\": \"Cerramos esa ducha para evitar caídas.\",\n  \"priority\": \"Alta\",\n  \"clarification_question\": null,\n  \"branch\": null,\n  \"report_type\": \"incident\",\n  \"request_category\": null,\n  \"request_kind\": null\n}"
+        }
+      ]
+    },
+    {
+      "case_id": "QA-TG-012",
+      "input": "El aire acondicionado de la sala de clases grupales no funciona. Suspendimos las clases por falta de ventilación. Prioridad alta.",
+      "gemini_calls": [
+        {
+          "output": "{\n  \"intent\": \"incident_report\",\n  \"conversation_reply\": null,\n  \"unit\": null,\n  \"area\": \"Salas de clases\",\n  \"location_context\": \"Sala de clases grupales\",\n  \"asset_category\": null,\n  \"equipment\": \"Aire acondicionado\",\n  \"failure_type\": \"No funciona\",\n  \"description\": \"El aire acondicionado de la sala de clases grupales no funciona.\",\n  \"operational_impact\": \"Se suspendieron las clases por falta de ventilación.\",\n  \"priority\": \"Alta\",\n  \"clarification_question\": null,\n  \"branch\": \"Quilín\",\n  \"report_type\": \"incident\",\n  \"request_category\": null,\n  \"request_kind\": null\n}"
+        }
+      ]
+    },
+    {
+      "case_id": "QA-TG-013",
+      "input": "En Musculación los enchufes de la pared producen chispas. Aislamos la zona y no se pueden usar esas máquinas por riesgo eléctrico. Prioridad crítica.",
+      "gemini_calls": [
+        {
+          "output": "{\n  \"intent\": \"incident_report\",\n  \"conversation_reply\": null,\n  \"unit\": null,\n  \"area\": \"Musculación\",\n  \"location_context\": \"Musculación\",\n  \"asset_category\": null,\n  \"equipment\": \"enchufes de la pared\",\n  \"failure_type\": \"producen chispas\",\n  \"description\": \"Los enchufes de la pared en el área de Musculación producen chispas.\",\n  \"operational_impact\": \"Zona aislada y máquinas fuera de uso por riesgo eléctrico.\",\n  \"priority\": \"critical\",\n  \"clarification_question\": null,\n  \"branch\": \"Quilín\",\n  \"report_type\": \"incident\",\n  \"request_category\": null,\n  \"request_kind\": null\n}"
+        }
+      ]
+    },
+    {
+      "case_id": "QA-TG-014",
+      "input": "El torniquete de Recepción no desbloquea al validar el acceso. Debemos dejar pasar a los socios manualmente y se forman filas. Prioridad alta.",
+      "gemini_calls": [
+        {
+          "output": "{\n  \"intent\": \"incident_report\",\n  \"conversation_reply\": null,\n  \"unit\": null,\n  \"area\": \"Recepción\",\n  \"location_context\": \"Recepción\",\n  \"asset_category\": null,\n  \"equipment\": \"torniquete\",\n  \"failure_type\": \"no desbloquea al validar el acceso\",\n  \"description\": \"El torniquete de Recepción no desbloquea al validar el acceso.\",\n  \"operational_impact\": \"Debemos dejar pasar a los socios manualmente y se forman filas.\",\n  \"priority\": \"high\",\n  \"clarification_question\": null,\n  \"branch\": \"Quilín\",\n  \"report_type\": \"incident\",\n  \"request_category\": null,\n  \"request_kind\": null\n}"
+        }
+      ]
+    },
+    {
+      "case_id": "QA-TG-015",
+      "input": "El computador de Recepción no tiene internet y el sistema administrativo quedó sin conexión. No podemos registrar ingresos ni nuevas inscripciones. Prioridad alta.",
+      "gemini_calls": [
+        {
+          "output": "{\n  \"intent\": \"incident_report\",\n  \"conversation_reply\": null,\n  \"unit\": null,\n  \"area\": \"Recepción\",\n  \"location_context\": \"Recepción\",\n  \"asset_category\": null,\n  \"equipment\": \"computador\",\n  \"failure_type\": \"no tiene internet\",\n  \"description\": \"El computador de Recepción no tiene internet y el sistema administrativo quedó sin conexión.\",\n  \"operational_impact\": \"No podemos registrar ingresos ni nuevas inscripciones.\",\n  \"priority\": \"alta\",\n  \"clarification_question\": null,\n  \"branch\": \"Quilín\",\n  \"report_type\": \"incident\",\n  \"request_category\": null,\n  \"request_kind\": null\n}"
+        }
+      ]
+    },
+    {
+      "case_id": "QA-TG-016",
+      "input": "Necesitamos reponer 8 colchonetas para clases grupales. Las actuales están rotas y faltan implementos para las clases. Prioridad media.",
+      "gemini_calls": [
+        {
+          "output": "{\n  \"intent\": \"request_report\",\n  \"conversation_reply\": null,\n  \"unit\": null,\n  \"area\": \"salas de clases\",\n  \"location_context\": \"salas de clases\",\n  \"asset_category\": null,\n  \"equipment\": null,\n  \"failure_type\": null,\n  \"description\": \"Reposición de 8 colchonetas para clases grupales; las actuales están rotas y faltan implementos para las clases.\",\n  \"operational_impact\": \"Dificultad para realizar las clases grupales correctamente por falta y mal estado de implementos.\",\n  \"priority\": \"media\",\n  \"clarification_question\": null,\n  \"branch\": \"Quilín\",\n  \"report_type\": \"request\",\n  \"request_category\": \"implementos deportivos\",\n  \"request_kind\": \"reposición\"\n}"
+        }
+      ]
+    },
+    {
+      "case_id": "QA-TG-017",
+      "input": "Solicito 5 litros de desinfectante y 3 paquetes de paños para los camarines. El stock se está agotando y debemos mantener la limpieza diaria. Prioridad alta.",
+      "gemini_calls": [
+        {
+          "output": "{\n  \"intent\": \"request_report\",\n  \"conversation_reply\": null,\n  \"unit\": null,\n  \"area\": \"Camarines\",\n  \"location_context\": \"Camarines\",\n  \"asset_category\": null,\n  \"equipment\": null,\n  \"failure_type\": null,\n  \"description\": \"Solicitud de 5 litros de desinfectante y 3 paquetes de paños.\",\n  \"operational_impact\": \"El stock se está agotando y es necesario para la limpieza diaria.\",\n  \"priority\": \"Alta\",\n  \"clarification_question\": null,\n  \"branch\": \"Quilín\",\n  \"report_type\": \"request\",\n  \"request_category\": \"Insumos de aseo\",\n  \"request_kind\": \"Reposición\"\n}"
+        }
+      ]
+    },
+    {
+      "case_id": "QA-TG-018",
+      "input": "Solicito comprar 4 bandas elásticas para Musculación. No hay suficientes para los entrenamientos guiados. Prioridad baja.",
+      "gemini_calls": [
+        {
+          "output": "{\n  \"intent\": \"request_report\",\n  \"conversation_reply\": null,\n  \"unit\": null,\n  \"area\": \"Musculación\",\n  \"location_context\": \"Musculación\",\n  \"asset_category\": null,\n  \"equipment\": null,\n  \"failure_type\": null,\n  \"description\": \"Solicitud de compra de 4 bandas elásticas para el área de Musculación.\",\n  \"operational_impact\": \"No hay suficientes bandas para los entrenamientos guiados.\",\n  \"priority\": \"low\",\n  \"clarification_question\": null,\n  \"branch\": \"Quilín\",\n  \"report_type\": \"request\",\n  \"request_category\": \"Materiales\",\n  \"request_kind\": \"compra\"\n}"
+        }
+      ]
+    },
+    {
+      "case_id": "QA-TG-019",
+      "input": "Solicito una revisión preventiva de las bicicletas estáticas de Cardio. Funcionan bien; queremos revisar su desgaste para prevenir fallas. Prioridad baja.",
+      "gemini_calls": [
+        {
+          "output": "{\n  \"intent\": \"request_report\",\n  \"conversation_reply\": null,\n  \"unit\": null,\n  \"area\": \"Cardio\",\n  \"location_context\": \"Cardio\",\n  \"asset_category\": null,\n  \"equipment\": \"bicicletas estáticas\",\n  \"failure_type\": null,\n  \"description\": \"Solicitud de revisión preventiva de las bicicletas estáticas para evaluar su desgaste y prevenir fallas futuras.\",\n  \"operational_impact\": \"Prevención de fallas\",\n  \"priority\": \"low\",\n  \"clarification_question\": null,\n  \"branch\": \"Quilín\",\n  \"report_type\": \"request\",\n  \"request_category\": \"mantenimiento\",\n  \"request_kind\": \"revisión preventiva\"\n}"
+        }
+      ]
+    },
+    {
+      "case_id": "QA-TG-020",
+      "input": "Necesitamos 12 mancuernas de 5 kg para Musculación. Se necesitan para las clases guiadas y hoy compartimos muy pocas entre los socios. Prioridad media.",
+      "gemini_calls": [
+        {
+          "output": "{\n  \"intent\": \"request_report\",\n  \"conversation_reply\": null,\n  \"unit\": null,\n  \"area\": \"Musculación\",\n  \"location_context\": \"Musculación\",\n  \"asset_category\": null,\n  \"equipment\": null,\n  \"failure_type\": null,\n  \"description\": \"Necesitamos 12 mancuernas de 5 kg.\",\n  \"operational_impact\": \"Se necesitan para las clases guiadas y hoy compartimos muy pocas entre los socios.\",\n  \"priority\": \"medium\",\n  \"clarification_question\": null,\n  \"branch\": \"Quilín\",\n  \"report_type\": \"request\",\n  \"request_category\": \"Equipamiento\",\n  \"request_kind\": \"reposición\"\n}"
+        }
+      ]
+    },
+    {
+      "case_id": "QA-TG-021",
+      "input": "Solicito 6 colchonetas para clases grupales porque varias están deterioradas y no alcanzan para los socios. Prioridad media.",
+      "gemini_calls": [
+        {
+          "output": "{\n  \"intent\": \"request_report\",\n  \"conversation_reply\": null,\n  \"unit\": null,\n  \"area\": \"Salas de clases\",\n  \"location_context\": \"Salas de clases\",\n  \"asset_category\": null,\n  \"equipment\": null,\n  \"failure_type\": null,\n  \"description\": \"Solicitud de 6 colchonetas debido a que varias están deterioradas.\",\n  \"operational_impact\": \"No alcanzan para los socios durante las clases grupales.\",\n  \"priority\": \"Media\",\n  \"clarification_question\": null,\n  \"branch\": \"Quilín\",\n  \"report_type\": \"request\",\n  \"request_category\": \"Materiales\",\n  \"request_kind\": \"Reposición\"\n}"
+        }
+      ]
+    },
+    {
+      "case_id": "QA-TG-022",
+      "input": "Necesitamos insumos de limpieza.",
+      "gemini_calls": [
+        {
+          "output": "{\n  \"intent\": \"request_report\",\n  \"conversation_reply\": null,\n  \"unit\": null,\n  \"area\": null,\n  \"location_context\": null,\n  \"asset_category\": null,\n  \"equipment\": null,\n  \"failure_type\": null,\n  \"description\": \"Solicitud de insumos de limpieza.\",\n  \"operational_impact\": null,\n  \"priority\": null,\n  \"clarification_question\": \"¿Qué insumos de limpieza necesitan específicamente y qué prioridad le asignan a esta solicitud (Baja, Media, Alta o Crítica)?\",\n  \"branch\": null,\n  \"report_type\": \"request\",\n  \"request_category\": \"Limpieza\",\n  \"request_kind\": \"reposición\"\n}"
+        }
+      ]
+    },
+    {
+      "case_id": "QA-TG-023",
+      "input": "La trotadora 3 del área de Cardio de Quilín no enciende y está fuera de servicio. Los socios no pueden utilizarla. Prioridad alta.",
+      "gemini_calls": [
+        {
+          "output": "{\n  \"intent\": \"incident_report\",\n  \"conversation_reply\": null,\n  \"unit\": null,\n  \"area\": \"Cardio\",\n  \"location_context\": \"Cardio\",\n  \"asset_category\": null,\n  \"equipment\": \"trotadora 3\",\n  \"failure_type\": \"no enciende\",\n  \"description\": \"La trotadora 3 no enciende y se encuentra fuera de servicio.\",\n  \"operational_impact\": \"Los socios no pueden utilizarla.\",\n  \"priority\": \"high\",\n  \"clarification_question\": null,\n  \"branch\": \"Quilín\",\n  \"report_type\": \"incident\",\n  \"request_category\": null,\n  \"request_kind\": null\n}"
+        }
+      ]
+    },
+    {
+      "case_id": "QA-TG-024",
+      "input": "Quiero hacer una solicitud para clases grupales.",
+      "gemini_calls": [
+        {
+          "output": "{\n  \"intent\": \"request_report\",\n  \"conversation_reply\": null,\n  \"unit\": null,\n  \"area\": null,\n  \"location_context\": null,\n  \"asset_category\": null,\n  \"equipment\": null,\n  \"failure_type\": null,\n  \"description\": \"Solicitud para clases grupales.\",\n  \"operational_impact\": null,\n  \"priority\": null,\n  \"clarification_question\": \"¿Podrías detallar qué necesitas específicamente para las clases grupales y qué prioridad tiene tu solicitud (Baja, Media, Alta o Crítica)?\",\n  \"branch\": \"Quilín\",\n  \"report_type\": \"request\",\n  \"request_category\": \"clases grupales\",\n  \"request_kind\": null\n}"
+        }
+      ]
+    },
+    {
+      "case_id": "QA-TG-025",
+      "input": "En Cardio, una elíptica no enciende y está fuera de servicio, así que los socios no la pueden usar. Prioridad media.",
+      "gemini_calls": [
+        {
+          "output": "{\n  \"intent\": \"incident_report\",\n  \"conversation_reply\": null,\n  \"unit\": null,\n  \"area\": \"Cardio\",\n  \"location_context\": \"Cardio\",\n  \"asset_category\": null,\n  \"equipment\": \"elíptica\",\n  \"failure_type\": \"no enciende\",\n  \"description\": \"Una elíptica en el área de Cardio no enciende y está fuera de servicio.\",\n  \"operational_impact\": \"los socios no la pueden usar\",\n  \"priority\": \"media\",\n  \"clarification_question\": null,\n  \"branch\": \"Quilín\",\n  \"report_type\": \"incident\",\n  \"request_category\": null,\n  \"request_kind\": null\n}"
+        }
+      ]
+    },
+    {
+      "case_id": "QA-TG-026",
+      "input": "En Cardio una trotadora no enciende. Está fuera de servicio y no se puede usar. Prioridad baja.",
+      "gemini_calls": [
+        {
+          "output": "{\n  \"intent\": \"incident_report\",\n  \"conversation_reply\": null,\n  \"unit\": \"Quilín\",\n  \"area\": \"Cardio\",\n  \"location_context\": \"Cardio\",\n  \"asset_category\": null,\n  \"equipment\": \"trotadora\",\n  \"failure_type\": \"no enciende\",\n  \"description\": \"Una trotadora en el área de Cardio no enciende, se encuentra fuera de servicio.\",\n  \"operational_impact\": \"no se puede usar\",\n  \"priority\": \"low\",\n  \"clarification_question\": null,\n  \"branch\": \"Quilín\",\n  \"report_type\": \"incident\",\n  \"request_category\": null,\n  \"request_kind\": null\n}"
+        }
+      ]
+    },
+    {
+      "case_id": "QA-TG-027",
+      "input": "La trotadra de cardio ta mala, la pantaya no prende. La dejamos fuera de servicio pq los socios no la pueden ocupar. Prioridad alta, porfa.",
+      "gemini_calls": [
+        {
+          "output": "{\n  \"intent\": \"incident_report\",\n  \"conversation_reply\": null,\n  \"unit\": null,\n  \"area\": \"Cardio\",\n  \"location_context\": \"Cardio\",\n  \"asset_category\": null,\n  \"equipment\": \"trotadora\",\n  \"failure_type\": \"pantalla no prende\",\n  \"description\": \"La trotadora no enciende y se encuentra fuera de servicio para los socios.\",\n  \"operational_impact\": \"los socios no la pueden ocupar\",\n  \"priority\": \"Alta\",\n  \"clarification_question\": null,\n  \"branch\": \"Quilín\",\n  \"report_type\": \"incident\",\n  \"request_category\": null,\n  \"request_kind\": null\n}"
+        }
+      ]
+    },
+    {
+      "case_id": "QA-TG-028",
+      "input": "Solicito 3 dispensadores de jabón para los camarines porque hay pocos disponibles y se dificulta el lavado de manos.",
+      "gemini_calls": [
+        {
+          "output": "{\n  \"intent\": \"request_report\",\n  \"conversation_reply\": null,\n  \"unit\": null,\n  \"area\": \"Camarines\",\n  \"location_context\": \"Camarines\",\n  \"asset_category\": null,\n  \"equipment\": null,\n  \"failure_type\": null,\n  \"description\": \"Solicitud de 3 dispensadores de jabón para los camarines.\",\n  \"operational_impact\": \"Hay pocos disponibles y se dificulta el lavado de manos.\",\n  \"priority\": null,\n  \"clarification_question\": \"¿Qué prioridad le asignas a esta solicitud: Baja, Media, Alta o Crítica?\",\n  \"branch\": \"Quilín\",\n  \"report_type\": \"request\",\n  \"request_category\": \"Insumos de aseo\",\n  \"request_kind\": \"Reposición\"\n}"
+        }
+      ]
+    },
+    {
+      "case_id": "QA-TG-029",
+      "input": "Solicito 4 balones medicinales para Musculación. Faltan para el entrenamiento guiado. Prioridad media.",
+      "gemini_calls": [
+        {
+          "output": "{\n  \"intent\": \"request_report\",\n  \"conversation_reply\": null,\n  \"unit\": null,\n  \"area\": \"Musculación\",\n  \"location_context\": \"Musculación\",\n  \"asset_category\": null,\n  \"equipment\": null,\n  \"failure_type\": null,\n  \"description\": \"Solicitud de 4 balones medicinales.\",\n  \"operational_impact\": \"Faltan para el entrenamiento guiado.\",\n  \"priority\": \"media\",\n  \"clarification_question\": null,\n  \"branch\": null,\n  \"report_type\": \"request\",\n  \"request_category\": \"materiales\",\n  \"request_kind\": \"reposición\"\n}"
+        }
+      ]
+    },
+    {
+      "case_id": "QA-TG-030",
+      "input": "Solicito 2 escobillones para los camarines. Los que tenemos están deteriorados y dificultan la limpieza. Prioridad baja.",
+      "gemini_calls": [
+        {
+          "output": "{\n  \"intent\": \"request_report\",\n  \"conversation_reply\": null,\n  \"unit\": null,\n  \"area\": \"Camarines\",\n  \"location_context\": \"Camarines\",\n  \"asset_category\": null,\n  \"equipment\": null,\n  \"failure_type\": null,\n  \"description\": \"Solicitud de 2 escobillones para los camarines.\",\n  \"operational_impact\": \"Los escobillones actuales están deteriorados y dificultan la limpieza.\",\n  \"priority\": \"baja\",\n  \"clarification_question\": null,\n  \"branch\": \"Quilín\",\n  \"report_type\": \"request\",\n  \"request_category\": \"Limpieza\",\n  \"request_kind\": \"reposición\"\n}"
+        }
+      ]
+    }
+  ]
+}

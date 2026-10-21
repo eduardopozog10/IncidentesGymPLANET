@@ -416,6 +416,45 @@ class IncidentDraftAdmin(SecureModelAdmin):
 
 
 from .models import NotificationOutbox
+from .models import RequestProduct, ProductAlias, RequestItem, RequestDocument
+
+
+class ProductAliasInline(admin.TabularInline):
+    model = ProductAlias
+    fields = ('name',)
+    extra = 1
+
+
+@admin.register(RequestProduct)
+class RequestProductAdmin(SecureModelAdmin):
+    list_display = ('code','name','presentation','purchase_unit','is_active')
+    list_filter = ('is_active',)
+    search_fields = ('code','name','aliases__name')
+    readonly_fields = ('created_at','updated_at')
+    inlines = [ProductAliasInline]
+
+    def has_delete_permission(self,request,obj=None):
+        return False
+
+
+class ConfirmedRequestAdmin(SecureModelAdmin):
+    def has_add_permission(self,request): return False
+    def has_change_permission(self,request,obj=None): return False
+    def has_delete_permission(self,request,obj=None): return False
+
+
+@admin.register(RequestItem)
+class RequestItemAdmin(ConfirmedRequestAdmin):
+    list_display = ('report','official_name','original_name','quantity','unit','outside_catalog')
+    search_fields = ('official_name','original_name')
+    readonly_fields = tuple(f.name for f in RequestItem._meta.fields)
+
+
+@admin.register(RequestDocument)
+class RequestDocumentAdmin(ConfirmedRequestAdmin):
+    list_display = ('original_name','branch','report','created_at')
+    exclude = ('file',)
+    readonly_fields = tuple(f.name for f in RequestDocument._meta.fields if f.name!='file')
 
 
 @admin.register(NotificationOutbox)

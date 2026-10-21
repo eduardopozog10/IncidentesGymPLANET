@@ -138,6 +138,12 @@ class ReportDetailView(OperationalView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         report = get_object_or_404(Incident.objects.select_related("branch", "branch_area", "technician", "gym_asset", "request_category").prefetch_related("maintenance_records__asset"), pk=self.kwargs["pk"])
+        from incidents.services.gymplanet_conversation import normalize
+        context['request_category_label'] = report.request_category.name if report.request_category_id else (
+            'Aseo y limpieza (tipo identificado; sin categoría vinculada)'
+            if report.report_type == 'request' and normalize(report.request_kind) == 'aseo y limpieza'
+            else 'Sin categoría registrada'
+        )
         area = report.branch_area.name if report.branch_area_id else report.area
         location = report.location_context
         same_location = " ".join((area or "").split()).casefold() == " ".join((location or "").split()).casefold()

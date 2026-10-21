@@ -26,8 +26,8 @@ class RecordedTelegramRegressions(TestCase):
         cls.reporter = Technician.objects.create(full_name="Cuenta QA simulada")
         cls.account = TechnicianChannel.objects.create(technician=cls.reporter,branch=cls.branch,provider="telegram",external_user_id="qa-recorded",external_chat_id="qa-recorded")
         root = Path(__file__).resolve().parents[1]
-        cls.recordings = json.loads((root/"docs"/"qa-telegram-initial-results.json").read_text(encoding="utf-8"))
-        cls.cases = json.loads((root/"docs"/"qa-telegram-30-scenarios.json").read_text(encoding="utf-8"))["cases"]
+        cls.recordings = json.loads((root/"incidents"/"fixtures"/"telegram_initial_extractions.json").read_text(encoding="utf-8"))
+        cls.cases = json.loads((root/"incidents"/"fixtures"/"telegram_initial_extractions.json").read_text(encoding="utf-8"))["cases"]
 
     def setUp(self):
         self.assertEqual(connection.settings_dict["NAME"],"test_incidentes_gymplanet_db")

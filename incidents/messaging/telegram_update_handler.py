@@ -71,6 +71,27 @@ class TelegramUpdateHandler:
             }
 
         if not isinstance(text, str) or not text.strip():
+            attachment = telegram_message.get('document')
+            photos = telegram_message.get('photo')
+            if attachment or photos:
+                from incidents.services.incoming_file_service import IncomingFileService
+                if not attachment:
+                    attachment = max(photos,key=lambda p:p.get('width',0)*p.get('height',0))
+                    attachment = dict(attachment,file_name='formulario.jpg',mime_type='image/jpeg')
+                try:
+                    result = IncomingFileService(self.incoming_service.incident_processor).process(
+                        provider=self.PROVIDER,external_user_id=external_user_id,external_chat_id=external_chat_id,
+                        external_message_id=f'{external_chat_id}:{telegram_message_id}',filename=attachment.get('file_name','archivo'),
+                        media_type=attachment.get('mime_type'),declared_size=attachment.get('file_size'),
+                        download=lambda:self.messaging_provider.download_file(attachment.get('file_id'),declared_size=attachment.get('file_size')),
+                        caption=telegram_message.get('caption',''),verified_transport=True)
+                except ChannelNotAuthorizedError:
+                    self.messaging_provider.send_text(external_chat_id,'Tu cuenta no está autorizada para enviar solicitudes.')
+                    return {'action':'unauthorized_user'}
+                except Exception:
+                    self.messaging_provider.send_text(external_chat_id,'No fue posible procesar el documento. Puedes volver a enviarlo o usar /cancelar.')
+                    return {'action':'processing_failed'}
+                return self._reply_to_result(result,external_chat_id)
             self.messaging_provider.send_text(
                 external_chat_id,
                 (
@@ -122,6 +143,9 @@ class TelegramUpdateHandler:
                 "action": "processing_failed",
             }
 
+        return self._reply_to_result(result,external_chat_id)
+
+    def _reply_to_result(self, result, external_chat_id):
         incoming_message = result["message"]
 
         if result["duplicate"]:
@@ -133,13 +157,26 @@ class TelegramUpdateHandler:
         processing_result = result["processing"]
         reply_text = processing_result["reply"]
 
+        remaining=reply_text
+        chunks=[]
+        while len(remaining.encode('utf-16-le'))//2>3900:
+            units=0
+            limit=0
+            for char in remaining:
+                units+=2 if ord(char)>0xffff else 1
+                if units>3900: break
+                limit+=1
+            split=remaining.rfind('\n',0,limit)
+            if split<1: split=limit
+            chunks.append(remaining[:split])
+            remaining=remaining[split:].lstrip('\n')
+        chunks.append(remaining)
+        sent_ids=[]
         try:
-            telegram_response = (
-                self.messaging_provider.send_text(
-                    external_chat_id,
-                    reply_text,
-                )
-            )
+            for chunk in chunks:
+                telegram_response=self.messaging_provider.send_text(external_chat_id,chunk)
+                outgoing_message=self._record_sent_reply(incoming_message=incoming_message,reply_text=chunk,telegram_response=telegram_response)
+                sent_ids.append(outgoing_message.pk)
         except Exception as error:
             self._record_failed_reply(
                 incoming_message=incoming_message,
@@ -152,16 +189,11 @@ class TelegramUpdateHandler:
                 "message_id": incoming_message.pk,
             }
 
-        outgoing_message = self._record_sent_reply(
-            incoming_message=incoming_message,
-            reply_text=reply_text,
-            telegram_response=telegram_response,
-        )
-
         return {
             "action": processing_result["action"],
             "incoming_message_id": incoming_message.pk,
             "outgoing_message_id": outgoing_message.pk,
+            "outgoing_message_ids":sent_ids,
             "incident_created": processing_result[
                 "incident_created"
             ],

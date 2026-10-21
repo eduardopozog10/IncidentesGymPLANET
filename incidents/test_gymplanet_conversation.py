@@ -194,7 +194,7 @@ class GymPlanetConversationTests(TestCase):
         self.assertEqual(Incident.objects.get().equipment, "Trotadora 1")
 
     def test_operational_request_needs_no_machine_or_failure(self):
-        result = self.send("Sucursal QUILIN; Solicito reponer mancuernas, impide entrenar, prioridad media")["processing"]
+        result = self.send("Sucursal QUILIN; Solicito reponer 2 mancuernas, impide entrenar, prioridad media")["processing"]
         self.assertEqual(result["missing_fields"], [])
         self.assertIn("Solicitud operativa", result["reply"])
         self.assertFalse(Incident.objects.exists())
@@ -209,7 +209,7 @@ class GymPlanetConversationTests(TestCase):
 
     def test_request_category_uses_registered_catalog(self):
         category = RequestCategory.objects.create(code="REPOSICION", name="Reposición de prueba")
-        result = self.send("Sucursal QUILIN; Solicito reponer mancuernas, impide entrenar, prioridad media")["processing"]
+        result = self.send("Sucursal QUILIN; Solicito reponer 2 mancuernas, impide entrenar, prioridad media")["processing"]
         self.assertEqual(result["extracted_data"]["request_category_id"], category.pk)
         self.send("Sí")
         self.assertEqual(Incident.objects.get().request_category, category)
@@ -230,7 +230,8 @@ class GymPlanetConversationTests(TestCase):
         )
         self.service = IncomingMessageService(incident_processor=IncidentProcessor(ai_provider=provider))
         result = self.send("Sucursal QUILIN; Hace falta renovar el material del salón, prioridad media")["processing"]
-        self.assertEqual(result["missing_fields"], [])
+        self.assertIn("request_items",result["missing_fields"])
+        self.assertFalse(Incident.objects.exists())
         self.assertEqual(result["extracted_data"]["priority"], "medium")
         self.assertEqual(result["extracted_data"]["report_type"], "request")
         self.assertEqual(provider.extract_incident.call_count, 1)
@@ -248,6 +249,9 @@ class GymPlanetConversationTests(TestCase):
     def test_request_gathers_justification_and_priority_progressively(self):
         result = self.send("Sucursal QUILIN; Solicito implementos de aseo")["processing"]
         self.assertIn("operational_impact", result["missing_fields"])
+        self.assertIn("request_items", result["missing_fields"])
+        self.assertFalse(Incident.objects.exists())
+        self.send("2 escobillones")
         result = self.send("No podemos limpiar los camarines")["processing"]
         self.assertEqual(result["missing_fields"], ["priority"])
         result = self.send("Media")["processing"]
@@ -303,7 +307,7 @@ class GymPlanetConversationTests(TestCase):
     def test_materials_request_does_not_require_selecting_existing_inventory(self):
         self.inventory(code="M-01", name="Mancuernas")
         self.inventory(code="M-02", name="Mancuernas")
-        result = self.send("Sucursal QUILIN; Solicito reponer mancuernas, impide entrenar, prioridad media")["processing"]
+        result = self.send("Sucursal QUILIN; Solicito reponer 2 mancuernas, impide entrenar, prioridad media")["processing"]
         self.assertEqual(result["missing_fields"], [])
         self.assertIsNone(result["extracted_data"]["gym_asset_id"])
 
@@ -405,7 +409,7 @@ class ProviderContractTests(TestCase):
         self.assertNotIn("Canal 13", prompt)
 
     def test_mock_request_contract_does_not_require_broken_machine(self):
-        result = MockAIProvider().extract_incident("Solicito reponer mancuernas, impide entrenar, prioridad media")
+        result = MockAIProvider().extract_incident("Solicito reponer 2 mancuernas, impide entrenar, prioridad media")
         self.assertEqual(result.report_type, "request")
         self.assertNotIn("failure_type", result.missing_fields)
         self.assertNotIn("equipment", result.missing_fields)

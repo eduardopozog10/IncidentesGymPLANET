@@ -1,9 +1,14 @@
-{% autoescape off %}Gym Planet Reportes
+{% load request_display %}{% autoescape off %}Gym Planet Reportes
 {{ report.code }} · {{ report.kind }}
 {% if report.branch %}Sucursal: {{ report.branch }}{% endif %}
 {% if report.area %}Área: {{ report.area }}{% endif %}
 {% if report.equipment %}Equipo o requerimiento: {{ report.equipment }}{% endif %}
-Descripción: {{ report.description }}
+{% if not hide_item_description %}Descripción: {{ report.description }}{% endif %}
+{% if report.category %}Categoría: {{ report.category }}{% endif %}
+{% for item in report.items %}- {{ item.official_name|default:item.original_name }}: {{ item.quantity|request_quantity }} {{ item.unit }} · {{ item.presentation }}{% if item.outside_catalog %} (fuera de catálogo){% endif %}
+{% endfor %}{% if report.justification %}Justificación o impacto: {{ report.justification }}{% endif %}
+{% for document in report.documents %}Archivo original adjunto: {{ document.original_name }}
+{% endfor %}
 Prioridad: {{ report.priority }}
 Estado: {{ report.status }}
 Fecha: {{ report.created }}

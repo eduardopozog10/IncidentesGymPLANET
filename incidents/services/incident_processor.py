@@ -1,5 +1,6 @@
 import re
 import unicodedata
+from incidents.presentation import format_quantity
 
 from django.db import transaction
 from django.core.exceptions import ValidationError
@@ -318,7 +319,16 @@ class IncidentProcessor:
         if draft and draft.extracted_data.get("branch_id") != branch.pk:
             return finish(message, action="branch_mismatch", draft=draft,
                           reply="La asociación de la cuenta cambió. El borrador conserva su sucursal original; cancélalo antes de iniciar otro.")
+        if draft is None and normalize(message.content).strip() in {'necesito ayuda','quiero registrar un reporte','quiero reportar algo'}:
+            draft = IncidentDraft.objects.create(technician=message.technician,channel_account=message.channel_account,initial_message=message,
+                extracted_data={'branch_id':branch.pk},missing_fields=['report_type'],last_question='¿Quieres reportar una falla o solicitar artículos o un servicio?')
+            return finish(message,draft=draft,missing=['report_type'],reply=draft.last_question)
         from incidents.services.conversation_controls import handle_controls
+        if context.kind == 'request':
+            from incidents.services.request_items import product_intent
+            if product_intent(context.parse_text,dict(draft.extracted_data or {}) if draft else {}):
+                from incidents.services.product_conversation import process_products
+                return process_products(self,message,draft,context)
         controlled = handle_controls(self, message, draft, context)
         if controlled is not None:
             return controlled
@@ -1559,7 +1569,13 @@ class IncidentProcessor:
         else:
             rows.extend([("Equipo/servicio", extracted_data.get("equipment")),
                          ("Síntoma", extracted_data.get("failure_type"))])
-        rows.extend([("Descripción", extracted_data.get("description")),
+        items = (extracted_data.get('_request_items') or []) if is_request else []
+        if is_request and items:
+            products = '\n'.join(f"  - {(r.get('official_name') or r['original_name'])}: {format_quantity(r['quantity'])} {r.get('unit','')}" + (' [fuera de catálogo]' if r.get('outside_catalog') else '') for r in items)
+            rows.append(('Productos', '\n'+products))
+        if extracted_data.get('_request_document_name'):
+            rows.append(('Archivo original',extracted_data['_request_document_name']))
+        rows.extend([("Descripción", None if items else extracted_data.get("description")),
                      ("Justificación o impacto" if is_request else "Impacto operacional", extracted_data.get("operational_impact")),
                      ("Prioridad", dict(Incident.Priority.choices).get(extracted_data.get("priority"), "Sin confirmar"))])
         lines = "\n".join(f"• {label}: {value}" for label, value in rows if value)
@@ -1582,6 +1598,12 @@ class IncidentProcessor:
             return finish(message, action="unauthorized_account", draft=draft, reply="La cuenta o su sucursal ya no están autorizadas. No se creó el reporte.")
         context = GymPlanetContext("", draft, branch=branch)
         checked = context.enrich(dict(extracted_data), self, draft)
+        if context.kind=='request' and not checked.get('_products_required'):
+            from incidents.services.request_items import product_intent
+            if product_intent(' '.join(str(checked.get(key) or '') for key in ('request_kind','description'))):
+                checked['_products_required']=True
+                extracted_data['_products_required']=True
+                draft.extracted_data['_products_required']=True
         required = ("request_kind", "description", "operational_impact", "priority") if context.kind == "request" else self.REQUIRED_FIELDS
         missing = context.missing(checked, required)
         for field, model in (("branch_id", Branch), ("branch_area_id", BranchArea), ("gym_asset_id", GymAsset), ("request_category_id", RequestCategory)):
@@ -1596,8 +1618,29 @@ class IncidentProcessor:
             draft.status = IncidentDraft.Status.COLLECTING
             draft.missing_fields = missing or ["catalog"]
             draft.last_question = context.question(missing, "Cambió un dato del catálogo o falta una elección explícita. Revisa la sucursal, área, equipo y prioridad antes de confirmar nuevamente.")
-            draft.save(update_fields=["status", "missing_fields", "last_question", "updated_at"])
+            draft.save(update_fields=["extracted_data", "status", "missing_fields", "last_question", "updated_at"])
             return finish(message, draft=draft, data=extracted_data, missing=draft.missing_fields, reply=draft.last_question)
+
+        documents = []
+        if checked.get('report_type') == 'request' and (checked.get('_products_required') or checked.get('_request_document_id')):
+            from incidents.services.request_items import validate_items, ItemInputError
+            from incidents.services.request_documents import original_bytes, DocumentInputError
+            from incidents.models import RequestDocument
+            try:
+                if checked.get('_products_required'):
+                    validate_items(checked.get('_request_items',[]),lock=True)
+                if checked.get('_item_issue') or checked.get('_document_review'):
+                    raise ItemInputError('Revisa los artículos o la lectura del documento antes de confirmar.')
+                documents = list(RequestDocument.objects.select_for_update().filter(draft=draft,is_current=True,report__isnull=True,branch=branch))
+                if checked.get('_request_document_id') and not any(d.pk == checked['_request_document_id'] for d in documents):
+                    raise ItemInputError('Vuelve a enviar el documento antes de confirmar.')
+                for document in documents:
+                    original_bytes(document)
+            except (ItemInputError,DocumentInputError,OSError):
+                draft.status = IncidentDraft.Status.COLLECTING
+                draft.last_question = 'Revisa los artículos y el archivo original; vuelve a enviar la lista o el documento antes de confirmar.'
+                draft.save(update_fields=['status','last_question','updated_at'])
+                return finish(message,draft=draft,data=extracted_data,reply=draft.last_question)
 
         initial_message_content = ""
 
@@ -1605,6 +1648,8 @@ class IncidentProcessor:
             initial_message_content = (
                 draft.initial_message.content
             )
+        if not initial_message_content.strip() and documents:
+            initial_message_content = 'Archivo original recibido: ' + ', '.join(d.original_name for d in documents)
 
         incident = Incident(
             technician=message.technician,
@@ -1646,7 +1691,18 @@ class IncidentProcessor:
             draft.last_question = "Hay datos incompletos o inconsistentes. Corrige el reporte antes de confirmar."
             draft.save(update_fields=["status", "last_question", "updated_at"])
             return finish(message, draft=draft, data=extracted_data, reply=draft.last_question)
+        incident._defer_creation_notification = bool(checked.get('report_type') == 'request' and (checked.get('_products_required') or documents))
         incident.save()
+        if incident._defer_creation_notification:
+            from incidents.services.request_items import persist_items
+            if checked.get('_products_required'):
+                persist_items(incident,checked)
+            for document in RequestDocument.objects.select_for_update().filter(draft=draft,report__isnull=True,branch=branch):
+                document.report = incident
+                document.full_clean()
+                document.save(update_fields=['report'])
+            from incidents.services.incident_notification_service import queue_created_notification
+            queue_created_notification(incident)
 
         draft.incident = incident
         draft.status = IncidentDraft.Status.COMPLETED

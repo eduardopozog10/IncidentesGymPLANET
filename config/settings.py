@@ -219,3 +219,10 @@ APP_BASE_URL = env("APP_BASE_URL", default="")
 EMAIL_TIMEOUT = env.int("EMAIL_TIMEOUT", default=20)
 EMAIL_USE_SSL = env.bool("EMAIL_USE_SSL", default=False)
 NOTIFICATION_MAX_ATTEMPTS = env.int("NOTIFICATION_MAX_ATTEMPTS", default=3)
+
+# Private pilot originals have no public media URL.
+REQUEST_PRIVATE_ROOT = Path(env("REQUEST_PRIVATE_ROOT", default=str(BASE_DIR / "env" / "request-originals")))
+REQUEST_MAX_FILE_BYTES = env.int("REQUEST_MAX_FILE_BYTES", default=5 * 1024 * 1024)
+REQUEST_MAX_ITEMS = env.int("REQUEST_MAX_ITEMS", default=20)
+REQUEST_DOCUMENT_TIMEOUT = env.int("REQUEST_DOCUMENT_TIMEOUT", default=10)
+REQUEST_DOCUMENT_VISION_ENABLED = env.bool("REQUEST_DOCUMENT_VISION_ENABLED", default=False)

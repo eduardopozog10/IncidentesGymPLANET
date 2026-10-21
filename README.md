@@ -1,5 +1,16 @@
 # IncidentesGymPLANET
 
+El [lote 11: solicitudes inteligentes y documentos privados](docs/lot11-intelligent-requests.md)
+incorpora catálogo administrable, artículos con cantidades, formularios y originales
+adjuntos mediante la outbox existente. Las migraciones 0024/0025 y la carga del
+catálogo requieren revisión y autorización antes de ejecutarse en la principal.
+La revisión local confirmó 0023 aplicada; se conservaron los cinco reportes existentes.
+
+Para pruebas locales aisladas, `uv run python manage.py test incidents --keepdb`
+selecciona la configuración segura de tests: base `test_incidentes_gymplanet_db`,
+Mock, correo en memoria y bloqueo de conexiones externas. No iniciar el bot con
+esta versión sobre una base que todavía no tenga las nuevas migraciones.
+
 El [lote 10: inventario, mantenimiento y conversación](docs/lot10-inventory-conversation.md)
 extiende los módulos existentes. Su migración 0023 requiere revisión y autorización
 antes de utilizar esta versión contra la principal.

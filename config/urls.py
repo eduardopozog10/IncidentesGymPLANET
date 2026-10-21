@@ -6,8 +6,12 @@ from incidents.dashboard_views import DashboardView, ReportListView, ReportDetai
 
 
 from incidents.inventory_views import AssetEditView, CategoryView, MaintenanceEditView, MaintenanceDashboard
+from incidents.request_views import ProductCatalogView, RequestDocumentDownload
 
 urlpatterns = [
+    path('dashboard/products/',ProductCatalogView.as_view(),name='request-products'),
+    path('dashboard/products/<int:pk>/',ProductCatalogView.as_view(),name='request-product-edit'),
+    path('dashboard/request-documents/<int:pk>/download/',RequestDocumentDownload.as_view(),name='request-document-download'),
     path("dashboard/assets/new/",AssetEditView.as_view(),name="asset-create"),
     path("dashboard/assets/<int:pk>/edit/",AssetEditView.as_view(),name="asset-edit"),
     path("dashboard/assets/categories/",CategoryView.as_view(),name="asset-categories"),

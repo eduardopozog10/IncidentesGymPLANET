@@ -2,7 +2,7 @@
 import re
 import unicodedata
 from incidents.services.gym_language import failure, request_intent, priority_choice, availability
-from incidents.services.conversation_evidence import ground_locations, retain_operational_state, request_reason, retain_request_materials
+from incidents.services.conversation_evidence import ground_locations, retain_operational_state, request_reason, request_justification, retain_request_materials
 
 from django.utils import timezone
 
@@ -22,6 +22,26 @@ def normalize(value):
     value = unicodedata.normalize("NFKD", str(value or "").casefold())
     value = "".join(c for c in value if not unicodedata.combining(c))
     return " ".join(re.sub(r"[^a-z0-9]+", " ", value).split())
+
+
+def generic_branch_reference(value):
+    """A generic noun phrase supplies no branch identity, including in forms."""
+    return bool(re.fullmatch(
+        r"(?:(?:la|esta|esa|nuestra|su|dicha)(?: misma)? )?(?:sucursal|sede)",
+        normalize(value),
+    ))
+
+
+def branch_label(text):
+    selection = re.search(r"\b(?:sucursal|sede)\s*:?\s*(?P<value>[^;,.\n]+)(?:[;,.\n]|$)", text, re.I)
+    if selection:
+        value = normalize(selection['value'])
+        prefix = normalize(text[:selection.start()])
+        generic_subject = re.search(r"\b(?:la|esta|esa|nuestra|su|dicha)(?: misma)?$", prefix)
+        statement = re.match(r"(?:no|sin|tiene|tenemos|hay|necesita|necesitamos|requiere|se|esta|para|porque|que)\b", value)
+        if not value or generic_branch_reference(value) or (generic_subject and statement and ':' not in selection[0]):
+            return None
+    return selection
 
 
 def matches(records, text):
@@ -48,16 +68,26 @@ def report_type(text, previous=None):
     text = normalize(text)
     if previous and not re.search(r"\b(?:es una incidencia|tipo incidencia|es una solicitud|tipo solicitud)\b", text):
         return previous
-    if failure(text):
+    if re.search(r"\b(?:es una solicitud|tipo solicitud)\b",text) and 'no es una solicitud' not in text:
+        return 'request'
+    if re.search(r"\b(?:es una incidencia|tipo incidencia)\b",text) and 'no es una incidencia' not in text:
+        return 'incident'
+    if failure(text) or re.search(r'\b(?:no enciende|se detiene|filtracion de agua|esta inundado|esta inundada)\b',text):
         return "incident"
     if request_intent(text):
         return "request"
+    if re.search(r'\b(?:solicito|solicitar|necesito|necesitamos|pido|pedir)\b.*\b(?:servicio|mantencion|mantenimiento|reparacion|proveedor|apoyo)\b',text):
+        return 'request'
     if re.search(r"\b(es una incidencia|tipo incidencia|reportar una falla|reportar un incidente)\b", text):
         return "incident"
     if re.search(r"\b(solicit\w*|reponer|reposicion|comprar|compra|requerimiento|nos faltan|faltan implementos|necesito materiales|necesitamos materiales)\b", text):
         return "request"
     if re.search(r"\b(pido|pedimos|necesito|necesitamos|requiero|requerimos)\b", text) and re.search(r"\b(toallas|mancuernas|discos|implementos|materiales|insumos|accesorios|aseo|limpieza)\b", text):
         return "request"
+    if re.search(r'\b(?:pedido|utiles de oficina|articulos de oficina|formulario de solicitud)\b',text) or re.search(r'\b(?:necesito|necesitamos|requiero)\s+\d+\s+\w+',text):
+        return 'request'
+    if re.search(r'\b(?:quiero|pido|quisiera|pedimos)\b.*\b(?:articulos|productos|utiles|aseo|papel|materiales|insumos)\b',text):
+        return 'request'
     return previous or "incident"
 
 
@@ -71,6 +101,7 @@ def request_kind(text):
         (r"\b(mantenimiento|mantencion)(?: preventiv[ao])?\b", "Mantenimiento"),
         (r"\breparacion\b", "Reparación"),
         (r"\b(implementos|materiales|insumos|accesorios|mancuernas|colchonetas|papel higienico)\b", "Materiales e implementos"),
+        (r"\b(servicio|proveedor|apoyo|contratar)\b", "Servicio o apoyo externo"),
     ):
         if re.search(pattern, text):
             return kind
@@ -95,19 +126,19 @@ class GymPlanetContext:
         self.kind = report_type(text, self.previous.get("report_type"))
         found = matches(Branch.objects.all(), text)
         # An explicit branch label corroborates identity; it never authorizes it.
-        selection = re.search(r"\bsucursal\s*:?\s*([^;,.\n]+)[;,.\n]", text, re.I)
+        selection = branch_label(text)
         if selection:
-            found = matches(Branch.objects.all(), selection.group(1))
+            found = matches(Branch.objects.all(), selection['value'])
         self.branch = branch
         self.authorized_mention = bool(branch and len(found) == 1 and found[0].pk == branch.pk)
         # Text may corroborate an association but can never grant/change it.
         all_mentions = [item for item in Branch.objects.all() if matches([item], text)]
         if branch is None:
             self.branch_issue = "La cuenta no tiene una sucursal activa autorizada. Contacta al administrador."
-        elif any(item.pk != branch.pk for item in all_mentions) or (selection and (len(found) != 1 or found[0].pk != branch.pk)) or ("sucursal" in normalize(text).split() and not all_mentions):
+        elif any(item.pk != branch.pk for item in all_mentions) or (selection and (len(found) != 1 or found[0].pk != branch.pk)):
             self.branch_issue = "La sucursal mencionada no coincide con la sucursal autorizada de esta cuenta. No se creará el reporte."
         self.parse_text = text
-        if selection:
+        if selection and self.branch and normalize(selection['value']) in (normalize(self.branch.name), normalize(self.branch.code)):
             self.parse_text = text[:selection.start()] + text[selection.end():]
         elif self.branch and normalize(text) in (normalize(self.branch.name), normalize(self.branch.code)):
             self.parse_text = ""
@@ -187,7 +218,9 @@ class GymPlanetContext:
         if self.kind == "request":
             previous_category = data.get("request_category")
             data["request_category"] = None
-            categories = matches(RequestCategory.objects.filter(is_active=True), self.parse_text)
+            registered = list(RequestCategory.objects.filter(is_active=True))
+            exact_kind = [c for c in registered if normalize(data.get('request_kind')) in (normalize(c.name), normalize(c.code))]
+            categories = exact_kind or matches(registered, self.parse_text)
             categories = categories or matches(RequestCategory.objects.filter(is_active=True), previous_category)
             categories = categories or matches(RequestCategory.objects.filter(is_active=True), data.get("request_kind"))
             if len(categories) == 1:
@@ -204,6 +237,12 @@ class GymPlanetContext:
             missing = [f for f in missing if f not in ("area", "location_context")]
         if self.catalog_issue:
             missing.insert(0, "catalog")
+        if self.kind == 'request' and data.get('_products_required'):
+            from incidents.services.request_items import validate_items, ItemInputError
+            try:
+                validate_items(data.get('_request_items',[]))
+            except ItemInputError:
+                missing.insert(0,'request_items')
         return missing
 
     def question(self, missing, fallback):
@@ -211,6 +250,9 @@ class GymPlanetContext:
             return self.branch_issue or self.branch_question()
         if self.catalog_issue:
             return self.catalog_issue
+        if self.kind == 'request' and missing and missing[0] in ('request_items','priority'):
+            from incidents.services.product_conversation import PRODUCT_QUESTION, PRIORITY_QUESTION
+            return PRODUCT_QUESTION if missing[0]=='request_items' else PRIORITY_QUESTION
         if self.kind == "request" and missing and missing[0] == "operational_impact":
             return "¿Por qué se necesita o qué impacto tiene lo solicitado en la operación de la sede?"
         if missing and missing[0] == "operational_impact" and (fallback or "").startswith("¿Qué impacto operacional") :
@@ -228,6 +270,11 @@ def finish(message, *, reply, action="ask_clarification", draft=None, data=None,
 
 
 def process_request(processor, message, draft, context, initial_extraction=None):
+    if initial_extraction is not None:
+        from incidents.services.request_items import product_intent
+        if product_intent(context.parse_text):
+            from incidents.services.product_conversation import process_products
+            return process_products(processor,message,draft,context)
     previous = dict(draft.extracted_data or {}) if draft else {}
     previous["_authorized_branch"] = f"{context.branch.name} ({context.branch.code})"
     text = context.parse_text
@@ -293,6 +340,7 @@ def process_request(processor, message, draft, context, initial_extraction=None)
     if normalize(data.get("request_kind")) in {"solicitud", "solicitud operativa", "requerimiento", "peticion", "pedido"}:
         data["request_kind"] = None
     data["request_kind"] = data.get("request_kind") or request_kind(text)
+    data['operational_impact'] = data.get('operational_impact') or request_justification(text)
     if not data.get("request_kind") and re.search(r"\b(?:necesito|necesitamos|solicito|requiero)\s+\d+\s+\w+", normalized):
         data["request_kind"] = "Materiales e implementos"
     # The original solicitation itself is a factual description, not an invented failure.

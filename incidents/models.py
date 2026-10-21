@@ -1,4 +1,7 @@
 import uuid
+from django.core.validators import MinValueValidator
+from decimal import Decimal
+from incidents.private_files import private_storage, request_upload_path
 
 from django.core.exceptions import ValidationError
 from django.db import models, transaction
@@ -939,3 +942,104 @@ class AssetActivity(models.Model):
 
     def delete(self,*args,**kwargs):
         raise ValidationError("Historial protegido.")
+
+
+class RequestProduct(models.Model):
+    code = models.CharField(max_length=50, unique=True)
+    name = models.CharField(max_length=120, verbose_name="nombre oficial")
+    presentation = models.CharField(max_length=120, blank=True, verbose_name="presentación documentada")
+    purchase_unit = models.CharField(max_length=40, blank=True, verbose_name="unidad de compra documentada")
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "request_products"
+        ordering = ["name", "code"]
+        verbose_name = "producto de solicitudes"
+        verbose_name_plural = "productos de solicitudes"
+
+    def __str__(self):
+        return f"{self.name} ({self.code})"
+
+
+class ProductAlias(models.Model):
+    product = models.ForeignKey(RequestProduct, on_delete=models.CASCADE, related_name="aliases")
+    name = models.CharField(max_length=120, verbose_name="sinónimo")
+    normalized = models.CharField(max_length=150, editable=False)
+
+    class Meta:
+        db_table = "product_aliases"
+        constraints = [models.UniqueConstraint(fields=["product", "normalized"], name="product_alias_unique")]
+
+    def save(self, *args, **kwargs):
+        from incidents.services.gymplanet_conversation import normalize
+        self.normalized = normalize(self.name)
+        if not self.normalized:
+            raise ValidationError("El sinónimo debe contener un nombre.")
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return self.name
+
+
+class RequestItem(models.Model):
+    report = models.ForeignKey(Incident, on_delete=models.PROTECT, related_name="request_items")
+    position = models.PositiveSmallIntegerField()
+    product = models.ForeignKey(RequestProduct, on_delete=models.PROTECT, null=True, blank=True, related_name="requested_items")
+    official_name = models.CharField(max_length=120, blank=True)
+    original_name = models.CharField(max_length=120)
+    quantity = models.DecimalField(max_digits=12, decimal_places=3, validators=[MinValueValidator(Decimal("0.001"))])
+    unit = models.CharField(max_length=40, blank=True)
+    presentation = models.CharField(max_length=120, blank=True)
+    outside_catalog = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "request_items"
+        ordering = ["position", "pk"]
+        constraints = [
+            models.CheckConstraint(condition=models.Q(quantity__gt=0), name="request_item_positive"),
+            models.CheckConstraint(condition=(models.Q(product__isnull=True, outside_catalog=True) | models.Q(product__isnull=False, outside_catalog=False)), name="request_item_catalog_flag"),
+            models.UniqueConstraint(fields=["report", "position"], name="request_item_position"),
+        ]
+
+    def clean(self):
+        super().clean()
+        if self.report_id and self.report.report_type != "request":
+            raise ValidationError("Solo las solicitudes pueden contener artículos.")
+
+    def save(self, *args, **kwargs):
+        if not self._state.adding:
+            raise ValidationError("Los artículos confirmados son históricos e inmutables.")
+        self.full_clean()
+        return super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError("Artículo histórico protegido.")
+
+
+class RequestDocument(models.Model):
+    message = models.OneToOneField(ChannelMessage, on_delete=models.PROTECT, related_name="request_document")
+    draft = models.ForeignKey(IncidentDraft, on_delete=models.PROTECT, related_name="request_documents")
+    report = models.ForeignKey(Incident, on_delete=models.PROTECT, related_name="request_documents", null=True, blank=True)
+    branch = models.ForeignKey(Branch, on_delete=models.PROTECT)
+    file = models.FileField(storage=private_storage, upload_to=request_upload_path, max_length=180)
+    original_name = models.CharField(max_length=120)
+    media_type = models.CharField(max_length=100)
+    size = models.PositiveIntegerField()
+    sha256 = models.CharField(max_length=64)
+    analysis = models.JSONField(default=dict)
+    is_current = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "request_documents"
+        constraints = [models.CheckConstraint(condition=models.Q(size__gt=0), name="request_document_nonempty")]
+
+    def clean(self):
+        super().clean()
+        if self.report_id and (self.report.report_type != "request" or self.report.branch_id != self.branch_id):
+            raise ValidationError("El documento debe pertenecer a la solicitud y sucursal autorizadas.")
+        if self.draft_id and self.draft.channel_account_id and self.draft.channel_account.branch_id != self.branch_id:
+            raise ValidationError("El documento no corresponde a la cuenta del borrador.")

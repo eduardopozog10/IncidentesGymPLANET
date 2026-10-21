@@ -20,7 +20,7 @@
 </div>
 <div>
 <dt>Categoría</dt>
-<dd>{{ report.request_category.name|default:'Sin categoría registrada' }}</dd>
+<dd>{{ request_category_label }}</dd>
 </div>{% else %}<div>
 <dt>Equipo o instalación</dt>
 <dd class="display-name">{{ report.equipment }}</dd>
@@ -44,7 +44,7 @@
 <dt>Fecha de creación</dt>
 <dd>{{ report.created_at|date:'d/m/Y · H:i' }}</dd>
 </div>
-</dl>{% if report.report_type == 'request' %}<p class="context-note">Las cantidades se presentan tal como fueron informadas; no se deducen campos adicionales.</p>{% endif %}</article>
+</dl>{% if report.report_type == 'request' %}<p class="context-note">Las cantidades se presentan tal como fueron informadas; no se deducen campos adicionales.</p>{% endif %}{% if report.report_type == 'request' %}{% include 'incidents/_request_items.html' %}{% endif %}</article>
 <aside class="panel status-panel">
 <p class="eyebrow">SEGUIMIENTO OPERATIVO</p>
 <h2>Gestión operativa</h2>{% for error in operation_errors %}<p role="alert" class="errorlist">{{ error }}</p>{% endfor %}

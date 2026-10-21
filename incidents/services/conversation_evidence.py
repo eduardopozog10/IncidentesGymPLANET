@@ -55,11 +55,27 @@ def retain_operational_state(data, text):
 
 def request_reason(text):
     return bool(re.search(
-        r"\b(?:porque|ya que|debido|se (?:esta )?(?:acabo|agot\w*)|no (?:hay|podemos|alcanza\w*)|"
+        r"\b(?:porque|ya que|debido|sin stock|no (?:nos )?quedan|se terminaron|se (?:esta )?(?:acabo|agot\w*)|no (?:hay|podemos|alcanza\w*)|"
         r"faltan?|falta de|dificult\w*|impide\w*|deteriorad\w*|rot[oa]s?|"
         r"para (?:que|poder|prevenir|evitar|mantener|completar|cubrir|asegurar|mejorar|cumplir|realizar)|"
         r"para (?:las |los |la |el )?(?:clases|entrenamientos|limpieza|aseo|higiene|operacion)|"
         r"compartimos|insuficient\w*|poc[oa]s?)\b", plain(text)))
+
+
+def request_justification(text):
+    label=re.search(r'\b(?:motivo|justificaci[oó]n|impacto)(?: correcto)?\s*:\s*(.+)',text,re.I)
+    if label:
+        value=label[1]
+    elif re.search(r'\b(?:solicitud de prueba|para (?:verificar|probar|validar)|(?:sin|no (?:tiene|hay|genera)) impacto operacional)\b', plain(text)):
+        value=text
+    elif request_reason(text):
+        without_context=re.sub(r'\bpara (?:las |los |la |el )?(?:clases|entrenamientos|limpieza|aseo|higiene|operacion)\b','',plain(text))
+        if not request_reason(without_context) and not re.search(r'\b(?:\d+|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez)\s+\w+',plain(text)):
+            return None
+        value=next((part for part in re.split(r'(?<=[.!?])\s+|\n',text) if request_reason(part)),text)
+    else:
+        return None
+    return re.split(r'\bprioridad\b',value,flags=re.I)[0].strip(' .') or None
 
 
 def retain_request_materials(data, text):

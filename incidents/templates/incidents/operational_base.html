@@ -52,6 +52,7 @@
 <svg aria-hidden="true">
 <use href="#list"/>
 </svg>Solicitudes</a>
+<a href="{% url 'request-products' %}" {% if section == 'products' %}aria-current="page"{% endif %}><svg aria-hidden="true"><use href="#list"/></svg>Productos de solicitudes</a>
 <a href="{% url 'dashboard-reports' %}" {% if section == 'reports' %}aria-current="page"{% endif %}>
 <svg aria-hidden="true">
 <use href="#list"/>

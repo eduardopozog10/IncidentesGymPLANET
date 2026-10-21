@@ -24,8 +24,14 @@ def queue_created_notification(report):
         "equipment":report.request_kind if report.report_type=="request" else report.equipment,
         "description":report.description,"priority":report.get_priority_display(),
         "status":report.get_status_display(),
+        "justification":report.operational_impact,
+        "category":report.request_category.name if report.request_category_id else '',
+        "items":list(report.request_items.order_by('position').values('official_name','original_name','quantity','unit','presentation','outside_catalog')) if report.report_type=='request' else [],
+        "documents":list(report.request_documents.filter(is_current=True).values('id','original_name','sha256','size','media_type')) if report.report_type=='request' else [],
         "created":timezone.localtime(report.created_at).strftime("%d/%m/%Y %H:%M"),
     }
+    for item in payload['items']:
+        item['quantity'] = str(item['quantity'])
     row, created = NotificationOutbox.objects.get_or_create(report=report,defaults={"payload":payload,"recipient":settings.INCIDENT_NOTIFICATION_EMAIL.strip()})
     if created and settings.EMAIL_NOTIFICATIONS_ENABLED:
         transaction.on_commit(lambda: dispatch_safely(row.pk), robust=True)
@@ -79,7 +85,12 @@ def dispatch(pk):
         row.save()
     # Claim committed before touching SMTP. Concurrent workers cannot claim it again.
     try:
-        context={"report":row.payload,"url":url}
+        # Hide only the generated cleaning-item enumeration, never a factual description.
+        hide_item_description = bool(
+            row.payload.get('items') and row.payload.get('equipment') == 'Aseo y limpieza'
+            and row.payload.get('description', '').lstrip().startswith('Solicitud de artículos:')
+        )
+        context={"report":row.payload,"url":url,"hide_item_description":hide_item_description}
         body=render_to_string("incidents/email/report_created.txt",context)
         html=render_to_string("incidents/email/report_created.html",context)
         email=EmailMultiAlternatives(subject=f"Gym Planet · {row.payload['code']} · {row.payload['priority']}",body=body,from_email=settings.DEFAULT_FROM_EMAIL,to=[row.recipient],headers={"Message-ID":f"<gymplanet-creation-{row.pk}@notifications.local>"})
@@ -88,6 +99,11 @@ def dispatch(pk):
         logo.add_header("Content-ID","<gymplanet-brand>")
         logo.add_header("Content-Disposition","inline",filename="gymplanet.png")
         email.attach(logo)
+        from incidents.models import RequestDocument
+        from incidents.services.request_documents import original_bytes
+        for attachment in row.payload.get('documents',[]):
+            document = RequestDocument.objects.get(pk=attachment['id'],report_id=row.report_id,sha256=attachment['sha256'])
+            email.attach(attachment['original_name'], original_bytes(document), attachment['media_type'])
         if email.send(fail_silently=False)!=1:
             raise RuntimeError("Backend sin confirmación")
     except Exception as error:

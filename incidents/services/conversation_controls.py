@@ -68,7 +68,9 @@ def handle_controls(processor, message, draft, context):
     correcting = bool(re.search(r"\b(?:me equivoque|corrige|corregir|correccion|cantidad correcta|prioridad correcta)\b", normalized))
     previous_kind = previous.get("report_type", "incident")
     switching = re.search(r"\b(?:es una incidencia|es una solicitud|tipo incidencia|tipo solicitud)\b", normalized) and report_type(normalized) != previous_kind
-    new_request = previous_kind == "incident" and report_type(normalized) == "request" and re.search(r"\b(?:solicito|necesitamos|nos faltan)\b", normalized)
+    new_request = previous_kind == "incident" and report_type(normalized) == "request" and re.search(r"\b(?:solicito|necesito|necesitamos|requiero|requerimos|nos faltan)\b", normalized)
+    if switching:
+        return resummarize(processor,message,draft,context,{'report_type':context.kind,'_products_required':False} if context.kind=='incident' else {'report_type':context.kind},acknowledgment='Entendido, corregí el tipo de reporte; revisa los datos antes de confirmar.')
     if re.search(r"\b(?:nuev[oa] (?:reporte|incidencia|solicitud)|otra (?:incidencia|solicitud))\b", normalized) or ((switching or new_request) and not correcting):
         return finish(message, action="pending_report", draft=draft, reply="Hay un reporte pendiente. Puedes continuar o corregirlo, o usar /cancelar antes de iniciar otro. Conservaré sus datos sin mezclar reportes.")
     if normalized in {"repite", "repite la pregunta", "repetir", "no entendi la pregunta"}:
